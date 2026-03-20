@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>QR Collections Manager</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Roboto+Mono:wght@400;500;600;700&display=swap');
+:root{
+  --pp:#5B2EE8;--pp-light:#EDE8FD;--pp-mid:#C4B4F9;
+  --uf:#F97316;--uf-light:#FEF0E6;--uf-mid:#FDC89A;
+  --green:#059669;--green-light:#D1FAE5;
+  --red:#DC2626;--red-light:#FEE2E2;
+  --amber:#D97706;--amber-light:#FEF3C7;
+  --bg:#F5F7FA;--card:#fff;--border:#E4E8EF;
+  --text:#1A2332;--muted:#8A97AA;--subtle:#F0F3F7;
+  --shadow:0 2px 12px rgba(26,35,50,.08);
+  --shadow-md:0 4px 20px rgba(26,35,50,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;max-width:500px;margin:0 auto;}
+
+/* TOPBAR */
+.topbar{background:#fff;padding:14px 16px 0;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;box-shadow:var(--shadow);}
+.top-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand-pills{display:flex;gap:6px;}
+.pill{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.pill-pp{background:var(--pp-light);color:var(--pp);}
+.pill-uf{background:var(--uf-light);color:var(--uf);}
+.app-title{font-size:16px;font-weight:800;color:var(--text);}
+.sync-dot{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--muted);}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--amber);}
+.dot.live{background:var(--green);}
+.dot.err{background:var(--red);}
+.tabs{display:flex;gap:2px;padding:0 2px;}
+.tab{flex:1;text-align:center;padding:10px 4px;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;letter-spacing:.5px;}
+.tab.active{color:var(--pp);border-bottom-color:var(--pp);}
+
+/* PAGES */
+.page{display:none;padding:16px 14px 100px;animation:fi .2s ease;}
+.page.active{display:block;}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* CARDS */
+.card{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:18px;margin-bottom:14px;border:1px solid var(--border);}
+.card-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;}
+
+/* FORM */
+label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px;}
+input[type=date],input[type=number],input[type=text],input[type=password],select{
+  width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;color:var(--text);
+  background:#fff;outline:none;transition:border .2s,box-shadow .2s;
+  -webkit-appearance:none;appearance:none;
+}
+input:focus,select:focus{border-color:var(--pp);box-shadow:0 0 0 3px rgba(91,46,232,.08);}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238A97AA' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:36px;}
+.form-row{margin-bottom:13px;}
+.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:13px;}
+
+/* SIDE BY SIDE ENTRY */
+.split-entry{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.split-card{border-radius:14px;padding:14px;border:2px solid;}
+.split-card.ufill{border-color:var(--uf-mid);background:var(--uf-light);}
+.split-card.phonepay{border-color:var(--pp-mid);background:var(--pp-light);}
+.split-label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;margin-bottom:10px;}
+.split-label.uf-lbl{color:var(--uf);}
+.split-label.pp-lbl{color:var(--pp);}
+.split-card input[type=number]{border:1.5px solid;font-size:16px;font-weight:700;font-family:'Roboto Mono',monospace;padding:12px 10px;text-align:center;}
+.split-card.ufill input{border-color:var(--uf-mid);color:var(--uf);}
+.split-card.ufill input:focus{border-color:var(--uf);box-shadow:0 0 0 3px rgba(249,115,22,.1);}
+.split-card.phonepay input{border-color:var(--pp-mid);color:var(--pp);}
+.split-card.phonepay input:focus{border-color:var(--pp);box-shadow:0 0 0 3px rgba(91,46,232,.1);}
+.rupee-wrap{position:relative;}
+.rupee-sym{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:14px;font-weight:700;}
+.split-card.ufill .rupee-sym{color:var(--uf);}
+.split-card.phonepay .rupee-sym{color:var(--pp);}
+.split-card input.with-rupee{padding-left:26px!important;}
+
+/* BUTTONS */
+.btn{width:100%;padding:13px;border-radius:11px;border:none;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .17s;}
+.btn-primary{background:linear-gradient(135deg,var(--pp),#7C3AED);color:#fff;box-shadow:0 4px 12px rgba(91,46,232,.3);}
+.btn-orange{background:linear-gradient(135deg,var(--uf),#EA580C);color:#fff;box-shadow:0 4px 12px rgba(249,115,22,.3);}
+.btn-green{background:linear-gradient(135deg,var(--green),#047857);color:#fff;}
+.btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text);}
+.btn:active{transform:scale(.97);}
+.btn-sm{padding:6px 12px;font-size:12px;width:auto;border-radius:8px;}
+.btn-edit{background:var(--pp-light);color:var(--pp);border:1px solid var(--pp-mid);}
+.btn-del{background:var(--red-light);color:var(--red);border:1px solid #FECACA;}
+
+/* TILES */
+.tiles-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.tiles-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
+.tile{background:var(--card);border-radius:13px;padding:13px 11px;text-align:center;border:1px solid var(--border);box-shadow:var(--shadow);}
+.tile-val{font-size:15px;font-weight:700;font-family:'Roboto Mono',monospace;line-height:1.2;}
+.tile-lbl{font-size:9px;color:var(--muted);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;}
+.tile-pp .tile-val{color:var(--pp);}
+.tile-uf .tile-val{color:var(--uf);}
+.tile-g .tile-val{color:var(--green);}
+.tile-r .tile-val{color:var(--red);}
+
+/* ENTRIES */
+.entry-item{background:var(--card);border-radius:12px;padding:13px 14px;margin-bottom:9px;border:1px solid var(--border);box-shadow:var(--shadow);}
+.entry-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+.shift-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:var(--subtle);color:var(--text);}
+.entry-date{font-size:12px;color:var(--muted);margin-top:3px;}
+.entry-amounts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.amt-box{border-radius:9px;padding:9px 11px;}
+.amt-box.pp{background:var(--pp-light);}
+.amt-box.uf{background:var(--uf-light);}
+.amt-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px;}
+.amt-box.pp .amt-lbl{color:var(--pp);}
+.amt-box.uf .amt-lbl{color:var(--uf);}
+.amt-val{font-size:14px;font-weight:700;font-family:'Roboto Mono',monospace;}
+.amt-box.pp .amt-val{color:var(--pp);}
+.amt-box.uf .amt-val{color:var(--uf);}
+.entry-actions{display:flex;gap:7px;}
+
+/* RECEIVED ENTRY */
+.recv-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:13px;}
+.recv-card{border-radius:12px;padding:13px;border:2px solid;}
+.recv-card.pp{border-color:var(--pp-mid);background:var(--pp-light);}
+.recv-card.uf{border-color:var(--uf-mid);background:var(--uf-light);}
+.recv-card-lbl{font-size:11px;font-weight:800;margin-bottom:8px;}
+.recv-card.pp .recv-card-lbl{color:var(--pp);}
+.recv-card.uf .recv-card-lbl{color:var(--uf);}
+.recv-card input{border:1.5px solid;font-size:15px;font-weight:700;font-family:'Roboto Mono',monospace;text-align:center;}
+.recv-card.pp input{border-color:var(--pp-mid);color:var(--pp);}
+.recv-card.pp input:focus{border-color:var(--pp);box-shadow:0 0 0 3px rgba(91,46,232,.1);}
+.recv-card.uf input{border-color:var(--uf-mid);color:var(--uf);}
+.recv-card.uf input:focus{border-color:var(--uf);box-shadow:0 0 0 3px rgba(249,115,22,.1);}
+
+/* MATCH ROWS */
+.match-section{margin-bottom:16px;}
+.match-hdr{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;padding:9px 13px;border-radius:10px;}
+.match-hdr.pp{background:var(--pp-light);color:var(--pp);}
+.match-hdr.uf{background:var(--uf-light);color:var(--uf);}
+.progress-wrap{background:#E9EDF2;border-radius:20px;height:7px;overflow:hidden;margin:7px 0 4px;}
+.progress-bar{height:100%;border-radius:20px;transition:width .5s;}
+.match-row{border-radius:11px;padding:11px 13px;margin-bottom:7px;border:1.5px solid;display:flex;justify-content:space-between;align-items:center;}
+.match-row.settled{background:#F0FDF4;border-color:#86EFAC;}
+.match-row.pending{background:#FFF7ED;border-color:#FED7AA;}
+.match-row.partial{background:#FEF2F2;border-color:#FCA5A5;}
+.mr-left .mr-shift{font-size:14px;font-weight:800;font-family:'Roboto Mono',monospace;}
+.match-row.settled .mr-shift{color:var(--green);}
+.match-row.pending .mr-shift{color:var(--amber);}
+.match-row.partial .mr-shift{color:var(--red);}
+.mr-left .mr-date{font-size:11px;color:var(--muted);margin-top:2px;}
+.mr-right{text-align:right;}
+.mr-amt{font-size:14px;font-weight:700;font-family:'Roboto Mono',monospace;}
+.match-row.settled .mr-amt{color:var(--green);}
+.match-row.pending .mr-amt{color:var(--amber);}
+.match-row.partial .mr-amt{color:var(--red);}
+.mr-status{font-size:11px;margin-top:2px;}
+
+/* REPORT */
+.rep-hdr{font-size:12px;font-weight:800;color:#fff;padding:10px 13px;border-radius:10px 10px 0 0;}
+.rep-hdr.pp{background:linear-gradient(135deg,var(--pp),#7C3AED);}
+.rep-hdr.uf{background:linear-gradient(135deg,var(--uf),#EA580C);}
+.rep-hdr.both{background:linear-gradient(135deg,#1A2332,#374151);}
+.tbl-wrap{overflow-x:auto;border-radius:0 0 12px 12px;border:1px solid var(--border);border-top:none;margin-bottom:16px;}
+.tbl{width:100%;border-collapse:collapse;font-size:12px;min-width:400px;}
+.tbl th{background:#F8FAFD;color:var(--muted);padding:9px 11px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;border-bottom:1px solid var(--border);}
+.tbl td{padding:9px 11px;border-bottom:1px solid var(--border);}
+.tbl tr:last-child td{border-bottom:none;}
+.tbl tfoot td{background:var(--subtle)!important;font-weight:700;}
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;}
+.bg{background:var(--green-light);color:var(--green);}
+.br{background:var(--red-light);color:var(--red);}
+.bo{background:var(--amber-light);color:var(--amber);}
+
+/* FILTER CHIPS */
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:13px;}
+.chip{padding:6px 13px;border-radius:20px;font-size:11px;font-weight:700;border:1.5px solid var(--border);background:var(--card);cursor:pointer;color:var(--muted);transition:all .15s;}
+.chip.active{background:var(--pp);border-color:var(--pp);color:#fff;}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(26,35,50,.4);z-index:200;align-items:flex-end;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:#fff;border-radius:22px 22px 0 0;padding:22px 18px 36px;width:100%;max-width:500px;max-height:92vh;overflow-y:auto;box-shadow:0 -8px 40px rgba(26,35,50,.2);}
+.modal-handle{width:36px;height:4px;background:var(--border);border-radius:4px;margin:0 auto 18px;}
+
+/* MISC */
+.divider{height:1px;background:var(--border);margin:14px 0;}
+.sh{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.sh-title{font-size:14px;font-weight:700;}
+.sh-count{font-size:12px;color:var(--muted);}
+.dg-hdr{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;padding:6px 3px 4px;margin-top:4px;}
+.empty{text-align:center;padding:32px 20px;color:var(--muted);}
+.empty .ico{font-size:36px;margin-bottom:8px;}
+.toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--text);color:#fff;padding:11px 22px;border-radius:28px;font-size:13px;font-weight:600;opacity:0;transition:all .3s;z-index:999;white-space:nowrap;box-shadow:var(--shadow-md);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.ok{background:var(--green);}.toast.err{background:var(--red);}
+.export-row{display:flex;gap:9px;margin-bottom:16px;}
+.export-row .btn{flex:1;padding:12px;font-size:13px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="top-row">
+    <div class="brand">
+      <div class="app-title">QR Collections</div>
+      <div class="brand-pills">
+        <span class="pill pill-pp">📱 PhonePe</span>
+        <span class="pill pill-uf">⛽ Ufill</span>
+      </div>
+    </div>
+    <div class="sync-dot"><div class="dot" id="sync-dot"></div><span id="sync-txt">Loading</span></div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('dsm')">📥 DSM Entry</div>
+    <div class="tab" onclick="switchTab('recv')">💰 Received</div>
+    <div class="tab" onclick="switchTab('report')">📊 Report</div>
+    <div class="tab" onclick="switchTab('ledger')">📒 Ledger</div>
+  </div>
+</div>
+
+<!-- ═══ DSM ENTRY ═══ -->
+<div class="page active" id="page-dsm">
+  <div class="card">
+    <div class="card-title">➕ New Shift Entry</div>
+    <div class="form-row-2">
+      <div><label>Shift</label>
+        <select id="dsm-shift">
+          <option value="1">Shift 1</option>
+          <option value="2">Shift 2</option>
+          <option value="3">Shift 3</option>
+        </select>
+      </div>
+      <div><label>Date</label><input type="date" id="dsm-date"></div>
+    </div>
+    <div class="split-entry">
+      <div class="split-card ufill">
+        <div class="split-label uf-lbl">⛽ Ufill QR</div>
+        <div class="rupee-wrap">
+          <span class="rupee-sym">₹</span>
+          <input type="number" id="dsm-uf" class="with-rupee" placeholder="0.00" min="0" step="0.01">
+        </div>
+      </div>
+      <div class="split-card phonepay">
+        <div class="split-label pp-lbl">📱 PhonePe QR</div>
+        <div class="rupee-wrap">
+          <span class="rupee-sym">₹</span>
+          <input type="number" id="dsm-pp" class="with-rupee" placeholder="0.00" min="0" step="0.01">
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="saveDSM()">＋ Save Entry</button>
+  </div>
+
+  <div class="sh"><div class="sh-title">Today's Entries</div><div class="sh-count" id="today-count"></div></div>
+  <div id="dsm-today"></div>
+  <div class="divider"></div>
+  <div class="sh"><div class="sh-title">Recent Entries</div><div class="sh-count" id="recent-count"></div></div>
+  <div id="dsm-recent"></div>
+</div>
+
+<!-- ═══ RECEIVED ═══ -->
+<div class="page" id="page-recv">
+  <div class="tiles-4">
+    <div class="tile tile-pp"><div class="tile-val" id="ov-pp-total">₹0</div><div class="tile-lbl">PhonePe Dr</div></div>
+    <div class="tile tile-pp"><div class="tile-val" id="ov-pp-recv">₹0</div><div class="tile-lbl">PhonePe Cr</div></div>
+    <div class="tile tile-uf"><div class="tile-val" id="ov-uf-total">₹0</div><div class="tile-lbl">Ufill Dr</div></div>
+    <div class="tile tile-uf"><div class="tile-val" id="ov-uf-recv">₹0</div><div class="tile-lbl">Ufill Cr</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">💳 Enter Amount Received</div>
+    <div class="form-row"><label>Credit Date</label><input type="date" id="recv-date"></div>
+    <div class="recv-split">
+      <div class="recv-card pp">
+        <div class="recv-card-lbl">📱 PhonePe Received</div>
+        <div class="rupee-wrap">
+          <span class="rupee-sym" style="color:var(--pp);">₹</span>
+          <input type="number" id="recv-pp" class="with-rupee" placeholder="0.00" min="0" step="0.01">
+        </div>
+      </div>
+      <div class="recv-card uf">
+        <div class="recv-card-lbl">⛽ Ufill Received</div>
+        <div class="rupee-wrap">
+          <span class="rupee-sym" style="color:var(--uf);">₹</span>
+          <input type="number" id="recv-uf" class="with-rupee" placeholder="0.00" min="0" step="0.01">
+        </div>
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:4px;"><label>Note (optional)</label><input type="text" id="recv-note" placeholder="e.g. Ref 12345"></div>
+    <button class="btn btn-green" onclick="saveRecv()" style="margin-top:12px;">✓ Save Received</button>
+  </div>
+
+  <div class="sh"><div class="sh-title">Received Entries</div><div class="sh-count" id="recv-count"></div></div>
+  <div id="recv-list"></div>
+  <div class="divider"></div>
+
+  <!-- MATCH SECTION -->
+  <div class="sh"><div class="sh-title">🔍 Match Status</div></div>
+
+  <div class="match-section">
+    <div class="match-hdr pp">📱 PhonePe — Settlement Status</div>
+    <div id="pp-match"></div>
+  </div>
+  <div class="match-section">
+    <div class="match-hdr uf">⛽ Ufill — Settlement Status</div>
+    <div id="uf-match"></div>
+  </div>
+</div>
+
+<!-- ═══ REPORT ═══ -->
+<div class="page" id="page-report">
+  <div class="card">
+    <div class="card-title">🗓️ Report Filters</div>
+    <div class="chips">
+      <div class="chip active" onclick="setFilter('today',this)">Today</div>
+      <div class="chip" onclick="setFilter('week',this)">This Week</div>
+      <div class="chip" onclick="setFilter('month',this)">This Month</div>
+      <div class="chip" onclick="setFilter('all',this)">All Time</div>
+      <div class="chip" onclick="setFilter('custom',this)">Custom</div>
+    </div>
+    <div id="custom-range" style="display:none;">
+      <div class="form-row-2">
+        <div><label>From</label><input type="date" id="rep-from" onchange="refreshReport()"></div>
+        <div><label>To</label><input type="date" id="rep-to" onchange="refreshReport()"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tiles-2">
+    <div class="tile tile-pp"><div class="tile-val" id="rt-pp">₹0</div><div class="tile-lbl">PhonePe Total</div></div>
+    <div class="tile tile-uf"><div class="tile-val" id="rt-uf">₹0</div><div class="tile-lbl">Ufill Total</div></div>
+  </div>
+
+  <div class="export-row">
+    <button class="btn btn-primary" onclick="exportExcel()">⬇ Excel</button>
+    <button class="btn btn-orange" onclick="exportPDF()">⬇ PDF</button>
+  </div>
+
+  <div class="rep-hdr both">📋 All Shift Entries</div>
+  <div class="tbl-wrap" id="rep-tbl"></div>
+
+  <div style="margin-top:28px;padding-top:16px;border-top:1px dashed var(--border);text-align:center;">
+    <p style="font-size:11px;color:var(--muted);margin-bottom:10px;">Admin only — requires PIN</p>
+    <button onclick="showResetModal()" style="background:transparent;border:1.5px solid #FECACA;color:var(--red);font-size:12px;font-weight:700;padding:9px 22px;border-radius:10px;cursor:pointer;">🗑 Reset All Data</button>
+  </div>
+</div>
+
+<!-- ═══ LEDGER ═══ -->
+<div class="page" id="page-ledger">
+  <div class="card">
+    <div class="card-title">📒 Ledger Filters</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div><label>From Date</label><input type="date" id="led-from"></div>
+      <div><label>To Date</label><input type="date" id="led-to"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:12px;">
+      <label>Ledger For</label>
+      <select id="led-platform">
+        <option value="pp">📱 PhonePe</option>
+        <option value="uf">⛽ Ufill</option>
+      </select>
+    </div>
+    <div class="form-row" style="margin-bottom:12px;">
+      <label>Opening Balance (₹)</label>
+      <input type="number" id="led-ob" placeholder="0.00" step="0.01" min="0">
+    </div>
+    <button class="btn btn-primary" onclick="generateLedger()">📒 Generate Ledger</button>
+  </div>
+  <div id="ledger-output" style="display:none;">
+    <div id="led-banner" style="background:#1A2332;border-radius:13px;padding:15px 16px;margin-bottom:13px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
+      <div><div style="font-size:10px;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:3px;">Opening Bal</div><div id="led-ob-val" style="font-size:15px;font-weight:800;font-family:'Roboto Mono',monospace;color:#fff;">₹0</div></div>
+      <div><div style="font-size:10px;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:3px;">Closing Bal</div><div id="led-cb-val" style="font-size:15px;font-weight:800;font-family:'Roboto Mono',monospace;color:#fff;">₹0</div></div>
+      <div><div style="font-size:10px;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:3px;">Net Movement</div><div id="led-net-val" style="font-size:15px;font-weight:800;font-family:'Roboto Mono',monospace;color:#fff;">₹0</div></div>
+    </div>
+    <div style="display:flex;gap:9px;margin-bottom:13px;">
+      <button class="btn btn-accent" onclick="exportLedgerExcel()" style="flex:1;padding:12px;font-size:13px;">⬇ Excel</button>
+      <button class="btn btn-primary" onclick="exportLedgerPDF()" style="flex:1;padding:12px;font-size:13px;">⬇ PDF</button>
+    </div>
+    <div id="ledger-table-wrap" style="background:var(--card);border-radius:14px;border:1px solid var(--border);overflow:hidden;"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="modal-overlay" id="modal" onclick="maybeCloseModal(event)">
+  <div class="modal-box"><div class="modal-handle"></div><div id="modal-body"></div></div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzyUloY82bSdbx5zTxmomgN5Rp9QTxfVYZkfv_rtu0NQv9vcidNjMb_oH9WNYh2Exgf/exec';
+const RESET_PIN = '1234'; // ← Change to your PIN
+const LOCAL_KEY = 'qr_active';
+
+// db structure: { entries:[], received:[] }
+// entry: { id, date, shift, pp, uf, createdAt }
+// received: { id, date, pp, uf, note, savedAt }
+let db = { entries:[], received:[] };
+
+// ── UTILS ──────────────────────────────────────────────────────────────────
+function todayStr(){return new Date().toISOString().split('T')[0];}
+function fmtAmt(n){return'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtTime(ts){
+  if(!ts)return'';
+  try{
+    const d=new Date(ts);
+    if(isNaN(d.getTime()))return'';
+    return d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
+  }catch{return'';}
+}
+function fmtDate(d){
+  if(!d)return'—';const s=String(d);
+  if(s.includes('/')){return s;}
+  if(s.includes('-')){const p=s.split('-');if(p.length===3)return`${p[2]}/${p[1]}/${p[0]}`;}
+  try{const dt=new Date(d);if(!isNaN(dt.getTime()))return`${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;}catch{}
+  return s;
+}
+function normalizeDate(d){
+  if(!d)return'';const s=String(d);
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  try{const dt=new Date(d);if(!isNaN(dt.getTime()))return`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;}catch{}
+  return s;
+}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function toast(msg,type='ok'){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type} show`;setTimeout(()=>t.className='toast',2800);}
+
+// ── SYNC ───────────────────────────────────────────────────────────────────
+function setSyncStatus(s){
+  const dot=document.getElementById('sync-dot'),txt=document.getElementById('sync-txt');
+  if(s==='syncing'){dot.className='dot';dot.style.background='var(--amber)';txt.textContent='Syncing...';}
+  else if(s==='ok'){dot.className='dot live';txt.textContent='Live';setTimeout(()=>{if(dot.className==='dot live')txt.textContent='Live';},2000);}
+  else if(s==='err'){dot.className='dot err';txt.textContent='Offline';}
+}
+async function apiGet(action){
+  return new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    const cb='_cb'+Date.now();
+    window[cb]=(data)=>{resolve(data);delete window[cb];s.remove();};
+    s.onerror=()=>{reject(new Error('failed'));s.remove();};
+    s.src=`${SHEET_URL}?action=${action}&callback=${cb}`;
+    document.head.appendChild(s);
+    setTimeout(()=>{if(window[cb]){delete window[cb];s.remove();reject(new Error('timeout'));}},10000);
+  });
+}
+async function apiPost(payload){
+  return new Promise((resolve)=>{
+    const s=document.createElement('script');
+    const cb='_cb'+Date.now();
+    window[cb]=(data)=>{resolve(data);delete window[cb];s.remove();};
+    s.onerror=()=>{resolve({success:true});s.remove();};
+    s.src=`${SHEET_URL}?payload=${encodeURIComponent(JSON.stringify(payload))}&callback=${cb}`;
+    document.head.appendChild(s);
+    setTimeout(()=>{if(window[cb]){delete window[cb];s.remove();resolve({success:true});}},10000);
+  });
+}
+
+async function loadFromSheet(){
+  setSyncStatus('syncing');
+  try{
+    const remote=await apiGet('getAll');
+    if(remote.error)throw new Error(remote.error);
+    db.entries=(remote.entries||[]).map(e=>({...e,date:normalizeDate(e.date),pp:Number(e.pp||0),uf:Number(e.uf||0)}));
+    db.received=(remote.received||[]).map(r=>({...r,date:normalizeDate(r.date),pp:Number(r.pp||0),uf:Number(r.uf||0)}));
+    setSyncStatus('ok');
+    refreshDSM();refreshRecv();
+  }catch(e){
+    setSyncStatus('err');
+    toast('Offline — using local data','err');
+    const local=localStorage.getItem('qr_db');
+    if(local)try{Object.assign(db,JSON.parse(local));}catch{}
+    refreshDSM();refreshRecv();
+  }
+}
+function saveLocal(){localStorage.setItem('qr_db',JSON.stringify(db));}
+
+// ── TABS ───────────────────────────────────────────────────────────────────
+function switchTab(tab){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['dsm','recv','report','ledger'][i]===tab));
+  document.getElementById('page-'+tab).classList.add('active');
+  if(tab==='recv')refreshRecv();
+  if(tab==='report')refreshReport();
+  if(tab==='ledger'){
+    const today=todayStr();
+    const d=new Date();
+    document.getElementById('led-from').value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
+    document.getElementById('led-to').value=today;
+  }
+}
+
+// ── MATCH ENGINE ───────────────────────────────────────────────────────────
+function computeMatch(platform){
+  // platform = 'pp' or 'uf'
+  const TOLERANCE=1.00;
+  const entries=[...db.entries]
+    .filter(e=>e[platform]>0)
+    .sort((a,b)=>a.date.localeCompare(b.date)||parseInt(a.shift)-parseInt(b.shift));
+  const totalReceived=db.received.reduce((s,r)=>s+(r[platform]||0),0);
+  const totalEntries=entries.reduce((s,e)=>s+e[platform],0);
+  let rem=totalReceived;
+  const smap={};
+  for(const e of entries){
+    const amt=e[platform];
+    if(rem<=0){smap[e.id+platform]={status:'pending',receivedAmt:0};}
+    else if(rem>=amt-TOLERANCE){smap[e.id+platform]={status:'settled',receivedAmt:amt};rem=Math.max(0,rem-amt);}
+    else{smap[e.id+platform]={status:'partial',receivedAmt:rem};rem=0;}
+  }
+  return{entries,smap,totalEntries,totalReceived,pending:Math.max(0,totalEntries-totalReceived),excess:Math.max(0,totalReceived-totalEntries)};
+}
+
+// ── DSM ENTRY ──────────────────────────────────────────────────────────────
+document.getElementById('dsm-date').value=todayStr();
+
+async function saveDSM(){
+  const shift=document.getElementById('dsm-shift').value;
+  const date=document.getElementById('dsm-date').value;
+  const pp=parseFloat(document.getElementById('dsm-pp').value)||0;
+  const uf=parseFloat(document.getElementById('dsm-uf').value)||0;
+  if(!date)return toast('Select a date','err');
+  if(pp===0&&uf===0)return toast('Enter at least one amount','err');
+  // Check duplicate shift+date
+  if(db.entries.some(e=>e.date===date&&e.shift===shift))return toast(`Shift ${shift} already entered for this date`,'err');
+  const entry={id:uid(),date,shift,pp,uf,createdAt:new Date().toISOString()};
+  db.entries.push(entry);
+  document.getElementById('dsm-pp').value='';
+  document.getElementById('dsm-uf').value='';
+  toast(`Saved ✓ Shift ${shift} — PP: ${fmtAmt(pp)} | UF: ${fmtAmt(uf)}`);
+  refreshDSM();saveLocal();
+  setSyncStatus('syncing');
+  await apiPost({action:'saveEntry',data:entry});
+  setSyncStatus('ok');
+}
+
+function refreshDSM(){
+  const today=todayStr();
+  const todayE=db.entries.filter(e=>e.date===today).sort((a,b)=>parseInt(a.shift)-parseInt(b.shift));
+  const recentE=db.entries.filter(e=>e.date!==today).sort((a,b)=>b.date.localeCompare(a.date)||parseInt(a.shift)-parseInt(b.shift)).slice(0,30);
+  document.getElementById('today-count').textContent=`${todayE.length} entr${todayE.length!==1?'ies':'y'}`;
+  document.getElementById('dsm-today').innerHTML=todayE.length?todayE.map(e=>entryHTML(e,true)).join(''):'<div class="empty"><div class="ico">📋</div><p>No entries today</p></div>';
+  document.getElementById('recent-count').textContent=recentE.length?`${recentE.length} entries`:'';
+  if(!recentE.length){document.getElementById('dsm-recent').innerHTML='';return;}
+  const g={};recentE.forEach(e=>{if(!g[e.date])g[e.date]=[];g[e.date].push(e);});
+  document.getElementById('dsm-recent').innerHTML=Object.entries(g).map(([d,es])=>`<div class="dg-hdr">📅 ${fmtDate(d)}</div>`+es.map(e=>entryHTML(e,false)).join('')).join('');
+}
+
+function entryHTML(e,showDel){
+  return`<div class="entry-item">
+    <div class="entry-header">
+      <div><span class="shift-badge">🕐 Shift ${e.shift}</span><div class="entry-date">📅 ${fmtDate(e.date)}${e.createdAt?' · ⏱ '+fmtTime(e.createdAt):''}</div></div>
+      <div style="font-size:12px;font-weight:700;color:var(--muted);">${fmtAmt((e.pp||0)+(e.uf||0))} total</div>
+    </div>
+    <div class="entry-amounts">
+      <div class="amt-box uf"><div class="amt-lbl">⛽ Ufill</div><div class="amt-val">${fmtAmt(e.uf)}</div></div>
+      <div class="amt-box pp"><div class="amt-lbl">📱 PhonePe</div><div class="amt-val">${fmtAmt(e.pp)}</div></div>
+    </div>
+    <div class="entry-actions">
+      <button class="btn btn-sm btn-edit" onclick="editEntry('${e.id}')">✏️ Edit</button>
+      ${showDel?`<button class="btn btn-sm btn-del" onclick="delEntry('${e.id}')">✕ Delete</button>`:''}
+    </div>
+  </div>`;
+}
+
+function editEntry(id){
+  const e=db.entries.find(x=>x.id===id);if(!e)return;
+  showModal(`<div style="font-size:16px;font-weight:700;margin-bottom:16px;">✏️ Edit Entry</div>
+    <div class="form-row-2">
+      <div><label>Shift</label><select id="ee-shift">
+        <option value="1"${e.shift==='1'?' selected':''}>Shift 1</option>
+        <option value="2"${e.shift==='2'?' selected':''}>Shift 2</option>
+        <option value="3"${e.shift==='3'?' selected':''}>Shift 3</option>
+      </select></div>
+      <div><label>Date</label><input type="date" id="ee-date" value="${e.date}"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+      <div><label>⛽ Ufill (₹)</label><input type="number" id="ee-uf" value="${e.uf}" min="0" step="0.01" style="color:var(--uf);font-weight:700;font-family:'Roboto Mono',monospace;"></div>
+      <div><label>📱 PhonePe (₹)</label><input type="number" id="ee-pp" value="${e.pp}" min="0" step="0.01" style="color:var(--pp);font-weight:700;font-family:'Roboto Mono',monospace;"></div>
+    </div>
+    <div style="display:flex;gap:9px;">
+      <button class="btn btn-primary" onclick="saveEditEntry('${id}')">✓ Save</button>
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+    </div>`);
+}
+
+async function saveEditEntry(id){
+  const shift=document.getElementById('ee-shift').value;
+  const date=document.getElementById('ee-date').value;
+  const pp=parseFloat(document.getElementById('ee-pp').value)||0;
+  const uf=parseFloat(document.getElementById('ee-uf').value)||0;
+  if(!date)return toast('Fill all fields','err');
+  const i=db.entries.findIndex(e=>e.id===id);
+  if(i>=0)db.entries[i]={...db.entries[i],shift,date,pp,uf};
+  closeModal();refreshDSM();saveLocal();toast('Updated ✓');
+  setSyncStatus('syncing');
+  await apiPost({action:'updateEntry',data:db.entries[i]});
+  setSyncStatus('ok');
+}
+
+async function delEntry(id){
+  if(!confirm('Delete this entry?'))return;
+  db.entries=db.entries.filter(e=>e.id!==id);
+  refreshDSM();saveLocal();toast('Deleted','err');
+  setSyncStatus('syncing');
+  await apiPost({action:'deleteEntry',id});
+  setSyncStatus('ok');
+}
+
+// ── RECEIVED ───────────────────────────────────────────────────────────────
+document.getElementById('recv-date').value=todayStr();
+
+async function saveRecv(){
+  const date=document.getElementById('recv-date').value;
+  const pp=parseFloat(document.getElementById('recv-pp').value)||0;
+  const uf=parseFloat(document.getElementById('recv-uf').value)||0;
+  const note=document.getElementById('recv-note').value.trim();
+  if(!date)return toast('Select a date','err');
+  if(pp===0&&uf===0)return toast('Enter at least one amount','err');
+  const entry={id:uid(),date,pp,uf,note,savedAt:new Date().toISOString()};
+  db.received.push(entry);
+  document.getElementById('recv-pp').value='';
+  document.getElementById('recv-uf').value='';
+  document.getElementById('recv-note').value='';
+  toast(`Saved ✓ PP: ${fmtAmt(pp)} | UF: ${fmtAmt(uf)}`);
+  refreshRecv();saveLocal();
+  setSyncStatus('syncing');
+  await apiPost({action:'saveReceived',data:entry});
+  setSyncStatus('ok');
+}
+
+function refreshRecv(){
+  const mpp=computeMatch('pp'),muf=computeMatch('uf');
+  document.getElementById('ov-pp-total').textContent=fmtAmt(mpp.totalEntries);
+  document.getElementById('ov-pp-recv').textContent=fmtAmt(mpp.totalReceived);
+  document.getElementById('ov-uf-total').textContent=fmtAmt(muf.totalEntries);
+  document.getElementById('ov-uf-recv').textContent=fmtAmt(muf.totalReceived);
+
+  // Received list
+  const sorted=[...db.received].sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('recv-count').textContent=`${sorted.length} entr${sorted.length!==1?'ies':'y'}`;
+  document.getElementById('recv-list').innerHTML=sorted.length?sorted.map(r=>`
+    <div class="entry-item">
+      <div class="entry-header">
+        <div><span class="shift-badge">💳 Received</span><div class="entry-date">📅 ${fmtDate(r.date)}${r.note?' · '+r.note:''}${r.savedAt?' · ⏱ '+fmtTime(r.savedAt):''}</div></div>
+      </div>
+      <div class="entry-amounts">
+        <div class="amt-box uf"><div class="amt-lbl">⛽ Ufill</div><div class="amt-val">${fmtAmt(r.uf)}</div></div>
+        <div class="amt-box pp"><div class="amt-lbl">📱 PhonePe</div><div class="amt-val">${fmtAmt(r.pp)}</div></div>
+      </div>
+      <div class="entry-actions">
+        <button class="btn btn-sm btn-edit" onclick="editRecv('${r.id}')">✏️ Edit</button>
+        <button class="btn btn-sm btn-del" onclick="delRecv('${r.id}')">✕ Delete</button>
+      </div>
+    </div>`).join(''):'<div class="empty"><div class="ico">💳</div><p>No received entries yet</p></div>';
+
+  renderMatch('pp',mpp);
+  renderMatch('uf',muf);
+}
+
+function renderMatch(platform,m){
+  const el=document.getElementById(platform+'-match');
+  const pct=m.totalEntries>0?Math.min(100,(m.totalReceived/m.totalEntries)*100).toFixed(1):0;
+  const bc=pct>=100?'var(--green)':pct>=50?'var(--amber)':'var(--red)';
+  let html=`<div style="background:var(--card);border-radius:12px;padding:13px;margin-bottom:10px;border:1px solid var(--border);">
+    <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+      <span style="font-size:12px;font-weight:700;color:var(--muted);">MATCHED</span>
+      <span style="font-size:13px;font-weight:700;color:${bc};">${pct}%</span>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%;background:${bc};"></div></div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px;">
+      <span style="font-size:11px;color:var(--muted);">${fmtAmt(m.totalReceived)} received</span>
+      <span style="font-size:11px;color:var(--muted);">${fmtAmt(m.totalEntries)} entries</span>
+    </div>
+  </div>`;
+  if(!m.entries.length){html+='<div class="empty"><div class="ico">📭</div><p>No entries</p></div>';el.innerHTML=html;return;}
+  const pending=m.entries.filter(e=>m.smap[e.id+platform]?.status!=='settled');
+  const settled=m.entries.filter(e=>m.smap[e.id+platform]?.status==='settled');
+  if(pending.length){
+    pending.forEach(e=>{
+      const st=m.smap[e.id+platform];
+      html+=`<div class="match-row ${st.status}">
+        <div class="mr-left"><div class="mr-shift">${fmtDate(e.date)} · S${e.shift}</div><div class="mr-date">${st.status==='partial'?`Partial — ${fmtAmt(st.receivedAmt)} received`:''}</div></div>
+        <div class="mr-right"><div class="mr-amt">${fmtAmt(e[platform])}</div><div class="mr-status">${st.status==='partial'?'⚠️ Partial':'❌ Pending'}</div></div>
+      </div>`;
+    });
+  }
+  if(settled.length){
+    html+=`<div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;margin:10px 3px 6px;">🟢 Settled (${settled.length})</div>`;
+    settled.forEach(e=>{
+      html+=`<div class="match-row settled">
+        <div class="mr-left"><div class="mr-shift">${fmtDate(e.date)} · S${e.shift}</div></div>
+        <div class="mr-right"><div class="mr-amt">${fmtAmt(e[platform])}</div><div class="mr-status" style="color:var(--green);">✅ Settled</div></div>
+      </div>`;
+    });
+  }
+  if(m.excess>0)html+=`<div style="background:#DBEAFE;border-radius:10px;padding:11px;margin-top:8px;border:1px solid #93C5FD;font-size:12px;font-weight:700;color:var(--pp);">ℹ️ Excess ${fmtAmt(m.excess)} — will adjust next entries</div>`;
+  el.innerHTML=html;
+}
+
+function editRecv(id){
+  const r=db.received.find(x=>x.id===id);if(!r)return;
+  showModal(`<div style="font-size:16px;font-weight:700;margin-bottom:16px;">✏️ Edit Received Entry</div>
+    <div class="form-row"><label>Date</label><input type="date" id="er-date" value="${r.date}"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+      <div><label>⛽ Ufill (₹)</label><input type="number" id="er-uf" value="${r.uf}" min="0" step="0.01" style="color:var(--uf);font-weight:700;font-family:'Roboto Mono',monospace;"></div>
+      <div><label>📱 PhonePe (₹)</label><input type="number" id="er-pp" value="${r.pp}" min="0" step="0.01" style="color:var(--pp);font-weight:700;font-family:'Roboto Mono',monospace;"></div>
+    </div>
+    <div class="form-row"><label>Note</label><input type="text" id="er-note" value="${r.note||''}"></div>
+    <div style="display:flex;gap:9px;">
+      <button class="btn btn-primary" onclick="saveEditRecv('${id}')">✓ Save</button>
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+    </div>`);
+}
+
+async function saveEditRecv(id){
+  const date=document.getElementById('er-date').value;
+  const pp=parseFloat(document.getElementById('er-pp').value)||0;
+  const uf=parseFloat(document.getElementById('er-uf').value)||0;
+  const note=document.getElementById('er-note').value.trim();
+  if(!date)return toast('Fill all fields','err');
+  const i=db.received.findIndex(r=>r.id===id);
+  if(i>=0)db.received[i]={...db.received[i],date,pp,uf,note};
+  closeModal();refreshRecv();saveLocal();toast('Updated ✓');
+  setSyncStatus('syncing');
+  await apiPost({action:'updateReceived',data:db.received[i]});
+  setSyncStatus('ok');
+}
+
+async function delRecv(id){
+  if(!confirm('Delete this received entry?'))return;
+  db.received=db.received.filter(r=>r.id!==id);
+  refreshRecv();saveLocal();toast('Deleted','err');
+  setSyncStatus('syncing');
+  await apiPost({action:'deleteReceived',id});
+  setSyncStatus('ok');
+}
+
+// ── REPORT ─────────────────────────────────────────────────────────────────
+let curFilter='today';
+function setFilter(f,el){curFilter=f;document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');document.getElementById('custom-range').style.display=f==='custom'?'block':'none';refreshReport();}
+
+function getFiltered(){
+  const today=todayStr(),now=new Date();
+  let entries=[...db.entries];
+  if(curFilter==='today')entries=entries.filter(e=>e.date===today);
+  else if(curFilter==='week'){const w=new Date(now);w.setDate(w.getDate()-7);entries=entries.filter(e=>new Date(e.date)>=w);}
+  else if(curFilter==='month')entries=entries.filter(e=>e.date.startsWith(today.slice(0,7)));
+  else if(curFilter==='custom'){
+    const f=document.getElementById('rep-from').value,t=document.getElementById('rep-to').value;
+    if(f)entries=entries.filter(e=>e.date>=f);if(t)entries=entries.filter(e=>e.date<=t);
+  }
+  return entries.sort((a,b)=>a.date.localeCompare(b.date)||parseInt(a.shift)-parseInt(b.shift));
+}
+
+function refreshReport(){
+  const entries=getFiltered();
+  const mpp=computeMatch('pp'),muf=computeMatch('uf');
+  const mm={};mpp.entries.forEach(e=>{mm[e.id+'pp']=mpp.smap[e.id+'pp'];});
+  muf.entries.forEach(e=>{mm[e.id+'uf']=muf.smap[e.id+'uf'];});
+
+  const totalPP=entries.reduce((s,e)=>s+(e.pp||0),0);
+  const totalUF=entries.reduce((s,e)=>s+(e.uf||0),0);
+  document.getElementById('rt-pp').textContent=fmtAmt(totalPP);
+  document.getElementById('rt-uf').textContent=fmtAmt(totalUF);
+
+  const tbl=document.getElementById('rep-tbl');
+  if(!entries.length){tbl.innerHTML='<div class="empty"><div class="ico">📊</div><p>No data</p></div>';return;}
+
+  let h=`<table class="tbl"><thead><tr>
+    <th>Date</th><th>Shift</th>
+    <th style="color:var(--uf);">⛽ Ufill</th><th>Ufill Status</th>
+    <th style="color:var(--pp);">📱 PhonePe</th><th>PP Status</th>
+  </tr></thead><tbody>`;
+  entries.forEach(e=>{
+    const ppS=mm[e.id+'pp']?.status||'pending';
+    const ufS=mm[e.id+'uf']?.status||'pending';
+    const ppL=ppS==='settled'?'🟢 Settled':ppS==='partial'?'🟡 Partial':'🔴 Pending';
+    const ufL=ufS==='settled'?'🟢 Settled':ufS==='partial'?'🟡 Partial':'🔴 Pending';
+    const ppC=ppS==='settled'?'bg':ppS==='partial'?'bo':'br';
+    const ufC=ufS==='settled'?'bg':ufS==='partial'?'bo':'br';
+    // Skip rows where amount is zero
+    const showUF=(e.uf||0)>0;
+    const showPP=(e.pp||0)>0;
+    if(!showUF&&!showPP)return;
+    h+=`<tr>
+      <td style="white-space:nowrap;font-size:11px;">${fmtDate(e.date)}</td>
+      <td style="font-weight:700;">S${e.shift}</td>
+      <td style="font-family:'Roboto Mono',monospace;color:var(--uf);font-weight:700;">${showUF?fmtAmt(e.uf):'—'}</td>
+      <td>${showUF?`<span class="badge ${ufC}" style="font-size:10px;">${ufL}</span>`:'—'}</td>
+      <td style="font-family:'Roboto Mono',monospace;color:var(--pp);font-weight:700;">${showPP?fmtAmt(e.pp):'—'}</td>
+      <td>${showPP?`<span class="badge ${ppC}" style="font-size:10px;">${ppL}</span>`:'—'}</td>
+    </tr>`;
+  });
+  h+=`</tbody><tfoot><tr>
+    <td colspan="2">TOTAL (${entries.length})</td>
+    <td style="font-family:'Roboto Mono',monospace;color:var(--uf);">${fmtAmt(totalUF)}</td><td></td>
+    <td style="font-family:'Roboto Mono',monospace;color:var(--pp);">${fmtAmt(totalPP)}</td><td></td>
+  </tr></tfoot></table>`;
+  tbl.innerHTML=h;
+}
+
+// ── EXPORT EXCEL ───────────────────────────────────────────────────────────
+function exportExcel(){
+  const entries=getFiltered();if(!entries.length)return toast('No data','err');
+  const mpp=computeMatch('pp'),muf=computeMatch('uf');
+  const data=[['Date','Shift','Ufill (₹)','Ufill Status','PhonePe (₹)','PhonePe Status']];
+  entries.forEach(e=>{
+    const ppS=mpp.smap[e.id+'pp']?.status||'pending';
+    const ufS=muf.smap[e.id+'uf']?.status||'pending';
+    if((e.uf||0)===0&&(e.pp||0)===0)return;
+    data.push([fmtDate(e.date),`Shift ${e.shift}`,(e.uf||0)>0?e.uf:'—',(e.uf||0)>0?(ufS==='settled'?'🟢 Settled':ufS==='partial'?'🟡 Partial':'🔴 Pending'):'—',(e.pp||0)>0?e.pp:'—',(e.pp||0)>0?(ppS==='settled'?'🟢 Settled':ppS==='partial'?'🟡 Partial':'🔴 Pending'):'—']);
+  });
+  const totalUF=entries.reduce((s,e)=>s+(e.uf||0),0);
+  const totalPP=entries.reduce((s,e)=>s+(e.pp||0),0);
+  data.push([]);data.push(['TOTAL','',totalUF,'',totalPP,'']);
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws['!cols']=[12,10,14,14,14,14].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws,'QR Collections');
+  XLSX.writeFile(wb,`QR_Collections_${todayStr()}.xlsx`);
+  toast('Excel downloaded!');
+}
+
+// ── EXPORT PDF ─────────────────────────────────────────────────────────────
+function exportPDF(){
+  const entries=getFiltered();if(!entries.length)return toast('No data','err');
+  const mpp=computeMatch('pp'),muf=computeMatch('uf');
+  const totalUF=entries.reduce((s,e)=>s+(e.uf||0),0);
+  const totalPP=entries.reduce((s,e)=>s+(e.pp||0),0);
+  let rows='';
+  entries.forEach(e=>{
+    const ppS=mpp.smap[e.id+'pp']?.status||'pending';
+    const ufS=muf.smap[e.id+'uf']?.status||'pending';
+    const ppC=ppS==='settled'?'#059669':ppS==='partial'?'#D97706':'#DC2626';
+    const ufC=ufS==='settled'?'#059669':ufS==='partial'?'#D97706':'#DC2626';
+    const showUF=(e.uf||0)>0;
+    const showPP=(e.pp||0)>0;
+    if(!showUF&&!showPP)return;
+    rows+=`<tr><td>${fmtDate(e.date)}</td><td>Shift ${e.shift}</td>
+      <td style="color:#F97316;font-family:monospace;font-weight:700;">${showUF?'₹'+(e.uf||0).toLocaleString('en-IN',{minimumFractionDigits:2}):'—'}</td>
+      <td style="color:${ufC};font-weight:700;">${showUF?(ufS==='settled'?'🟢 Settled':ufS==='partial'?'🟡 Partial':'🔴 Pending'):'—'}</td>
+      <td style="color:#5B2EE8;font-family:monospace;font-weight:700;">${showPP?'₹'+(e.pp||0).toLocaleString('en-IN',{minimumFractionDigits:2}):'—'}</td>
+      <td style="color:${ppC};font-weight:700;">${showPP?(ppS==='settled'?'🟢 Settled':ppS==='partial'?'🟡 Partial':'🔴 Pending'):'—'}</td>
+    </tr>`;
+  });
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>QR Collections Report</title>
+  <style>body{font-family:Arial,sans-serif;font-size:12px;padding:24px;color:#1A2332;}
+  h1{font-size:20px;font-weight:800;margin-bottom:4px;}
+  .meta{color:#8A97AA;font-size:11px;margin-bottom:16px;}
+  .summary{display:flex;gap:10px;margin-bottom:18px;}
+  .sbox{border-radius:8px;padding:12px 16px;flex:1;text-align:center;}
+  .sval{font-size:16px;font-weight:800;font-family:monospace;}.slbl{font-size:10px;color:#8A97AA;text-transform:uppercase;margin-top:2px;}
+  table{width:100%;border-collapse:collapse;}
+  th{background:#F5F7FA;color:#8A97AA;padding:9px 10px;text-align:left;font-size:10px;text-transform:uppercase;border-bottom:1px solid #E4E8EF;}
+  td{padding:9px 10px;border-bottom:1px solid #E4E8EF;font-size:12px;}
+  tfoot td{background:#F5F7FA!important;font-weight:700;}
+  .btn{background:#1A2332;color:#fff;border:none;padding:10px 22px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;margin-top:20px;}
+  @media print{.btn{display:none;}}</style></head><body>
+  <h1>📱⛽ QR Collections Report</h1>
+  <div class="meta">Generated: ${new Date().toLocaleString('en-IN')}</div>
+  <div class="summary">
+    <div class="sbox" style="background:#EDE8FD;"><div class="sval" style="color:#5B2EE8;">₹${totalPP.toLocaleString('en-IN',{minimumFractionDigits:2})}</div><div class="slbl">PhonePe Total</div></div>
+    <div class="sbox" style="background:#FEF0E6;"><div class="sval" style="color:#F97316;">₹${totalUF.toLocaleString('en-IN',{minimumFractionDigits:2})}</div><div class="slbl">Ufill Total</div></div>
+    <div class="sbox" style="background:#F5F7FA;"><div class="sval" style="color:#1A2332;">₹${(totalPP+totalUF).toLocaleString('en-IN',{minimumFractionDigits:2})}</div><div class="slbl">Grand Total</div></div>
+  </div>
+  <table><thead><tr><th>Date</th><th>Shift</th><th>⛽ Ufill</th><th>Ufill Status</th><th>📱 PhonePe</th><th>PP Status</th></tr></thead>
+  <tbody>${rows}</tbody>
+  <tfoot><tr><td colspan="2">TOTAL (${entries.length})</td><td style="color:#F97316;font-family:monospace;">₹${totalUF.toLocaleString('en-IN',{minimumFractionDigits:2})}</td><td></td><td style="color:#5B2EE8;font-family:monospace;">₹${totalPP.toLocaleString('en-IN',{minimumFractionDigits:2})}</td><td></td></tr></tfoot></table>
+  <button class="btn" onclick="window.print()">🖨 Print / Save PDF</button>
+  </body></html>`);
+  w.document.close();toast('PDF opened!');
+}
+
+// ── MODAL ──────────────────────────────────────────────────────────────────
+function showModal(html){document.getElementById('modal-body').innerHTML=html;document.getElementById('modal').classList.add('open');}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+function maybeCloseModal(e){if(e.target===document.getElementById('modal'))closeModal();}
+
+// ── RESET ──────────────────────────────────────────────────────────────────
+function showResetModal(){
+  showModal(`<div style="text-align:center;margin-bottom:18px;">
+    <div style="font-size:38px;margin-bottom:8px;">🔐</div>
+    <div style="font-size:17px;font-weight:800;margin-bottom:6px;">Reset All Data</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.7;">Permanently deletes all entries and received data. Enter PIN to proceed.</div>
+  </div>
+  <div class="form-row"><label>Admin PIN</label><input type="password" id="reset-pin" placeholder="••••" maxlength="8" style="font-size:24px;text-align:center;letter-spacing:8px;font-family:'Roboto Mono',monospace;"></div>
+  <div id="reset-err" style="color:var(--red);font-size:12px;font-weight:700;text-align:center;margin-bottom:10px;display:none;">❌ Incorrect PIN</div>
+  <div style="display:flex;gap:9px;">
+    <button class="btn" style="background:var(--red);color:#fff;" onclick="confirmReset()">🗑 Reset</button>
+    <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+  </div>`);
+  setTimeout(()=>{const p=document.getElementById('reset-pin');if(p)p.focus();},200);
+}
+
+async function confirmReset(){
+  const pin=document.getElementById('reset-pin').value;
+  if(pin!==RESET_PIN){document.getElementById('reset-err').style.display='block';document.getElementById('reset-pin').value='';return;}
+  db.entries=[];db.received=[];saveLocal();
+  closeModal();refreshDSM();refreshRecv();refreshReport();toast('All data cleared');
+  setSyncStatus('syncing');
+  await apiPost({action:'resetAll'});
+  setSyncStatus('ok');
+}
+
+// ── LEDGER ────────────────────────────────────────────────────────────────
+function generateLedger(){
+  const from=document.getElementById('led-from').value;
+  const to=document.getElementById('led-to').value;
+  const platform=document.getElementById('led-platform').value;
+  const ob=parseFloat(document.getElementById('led-ob').value)||0;
+  if(!from||!to)return toast('Select date range','err');
+  if(from>to)return toast('From must be before To','err');
+
+  const pName=platform==='pp'?'PhonePe':'Ufill';
+  const pColor=platform==='pp'?'#5B2EE8':'#F97316';
+
+  // Get entries filtered by date — only where platform amount > 0
+  const entries=db.entries
+    .filter(e=>e.date>=from&&e.date<=to&&(e[platform]||0)>0)
+    .sort((a,b)=>a.date.localeCompare(b.date)||parseInt(a.shift)-parseInt(b.shift));
+
+  // Get received filtered by date — only where platform amount > 0
+  const received=db.received
+    .filter(r=>r.date>=from&&r.date<=to&&(r[platform]||0)>0)
+    .sort((a,b)=>a.date.localeCompare(b.date));
+
+  const totalDr=entries.reduce((s,e)=>s+(e[platform]||0),0);
+  const totalCr=received.reduce((s,r)=>s+(r[platform]||0),0);
+  const closingBal=ob+totalCr-totalDr;
+  const net=totalCr-totalDr;
+
+  // Banner
+  document.getElementById('led-ob-val').textContent=fmtAmt(ob);
+  const cbEl=document.getElementById('led-cb-val');
+  cbEl.textContent=fmtAmt(Math.abs(closingBal))+(closingBal<0?' Dr':closingBal>0?' Cr':'');
+  cbEl.style.color=closingBal<0?'#FCA5A5':closingBal>0?'#6EE7B7':'#fff';
+  const netEl=document.getElementById('led-net-val');
+  netEl.textContent=fmtAmt(Math.abs(net))+(net<0?' Dr':net>0?' Cr':'');
+  netEl.style.color=net<0?'#FCA5A5':net>0?'#6EE7B7':'#fff';
+
+  // Merge all entries + received sorted by date
+  const combined=[
+    ...entries.map(e=>({date:e.date,shift:e.shift,amount:e[platform],type:'debit',ts:e.createdAt})),
+    ...received.map(r=>({date:r.date,shift:null,amount:r[platform],type:'credit',note:r.note||'',ts:r.savedAt}))
+  ].sort((a,b)=>a.date.localeCompare(b.date)||(a.ts||'').localeCompare(b.ts||''));
+
+  let bal=ob;
+  let rows=`<div style="display:grid;grid-template-columns:85px 1fr 90px 90px 95px;background:${pColor};padding:9px 12px;">
+    <span style="font-size:10px;font-weight:700;color:rgba(255,255,255,.8);text-transform:uppercase;">Date</span>
+    <span style="font-size:10px;font-weight:700;color:rgba(255,255,255,.8);text-transform:uppercase;">Particulars</span>
+    <span style="font-size:10px;font-weight:700;color:rgba(255,255,255,.8);text-transform:uppercase;text-align:right;">Debit</span>
+    <span style="font-size:10px;font-weight:700;color:rgba(255,255,255,.8);text-transform:uppercase;text-align:right;">Credit</span>
+    <span style="font-size:10px;font-weight:700;color:rgba(255,255,255,.8);text-transform:uppercase;text-align:right;">Balance</span>
+  </div>
+  <div style="display:grid;grid-template-columns:85px 1fr 90px 90px 95px;padding:9px 12px;background:#F0F9FF;border-bottom:1px solid var(--border);">
+    <span style="font-size:11px;color:var(--muted);"></span>
+    <span style="font-size:12px;font-weight:700;color:var(--text);">OPENING BALANCE</span>
+    <span></span><span></span>
+    <span style="font-size:12px;font-weight:700;font-family:'Roboto Mono',monospace;text-align:right;color:${pColor};">${fmtAmt(ob)}</span>
+  </div>`;
+
+  combined.forEach(e=>{
+    const isD=e.type==='debit';
+    if(isD)bal-=e.amount; else bal+=e.amount;
+    const bc=bal<0?'#DC2626':bal>0?'#0C3547':'#888';
+    rows+=`<div style="display:grid;grid-template-columns:85px 1fr 90px 90px 95px;padding:9px 12px;border-bottom:1px solid var(--border);">
+      <span style="font-size:11px;color:var(--muted);white-space:nowrap;">${fmtDate(e.date)}</span>
+      <span style="font-size:12px;font-weight:600;">${isD?`Shift ${e.shift}`:(e.note||'Credit Received')}</span>
+      <span style="font-size:12px;font-family:'Roboto Mono',monospace;font-weight:700;color:#DC2626;text-align:right;">${isD?fmtAmt(e.amount):'—'}</span>
+      <span style="font-size:12px;font-family:'Roboto Mono',monospace;font-weight:700;color:#059669;text-align:right;">${!isD?fmtAmt(e.amount):'—'}</span>
+      <span style="font-size:12px;font-family:'Roboto Mono',monospace;font-weight:700;text-align:right;color:${bc};">${fmtAmt(Math.abs(bal))}${bal<0?' Dr':bal>0?' Cr':''}</span>
+    </div>`;
+  });
+
+  rows+=`<div style="display:grid;grid-template-columns:85px 1fr 90px 90px 95px;padding:9px 12px;background:#F5FAFE;border-bottom:1px solid var(--border);">
+    <span></span><span style="font-size:12px;font-weight:700;">SUB TOTAL</span>
+    <span style="font-size:12px;font-family:'Roboto Mono',monospace;font-weight:700;color:#DC2626;text-align:right;">${fmtAmt(totalDr)}</span>
+    <span style="font-size:12px;font-family:'Roboto Mono',monospace;font-weight:700;color:#059669;text-align:right;">${fmtAmt(totalCr)}</span>
+    <span></span>
+  </div>
+  <div style="display:grid;grid-template-columns:85px 1fr 90px 90px 95px;padding:9px 12px;background:#1A2332;">
+    <span></span><span style="font-size:12px;font-weight:700;color:#fff;">CLOSING BALANCE</span>
+    <span></span><span></span>
+    <span style="font-size:12px;font-family:'Roboto Mono',monospace;font-weight:800;text-align:right;color:${closingBal<0?'#FCA5A5':closingBal>0?'#6EE7B7':'#fff'};">${fmtAmt(Math.abs(closingBal))}${closingBal<0?' Dr':closingBal>0?' Cr':''}</span>
+  </div>`;
+
+  document.getElementById('ledger-table-wrap').innerHTML=rows;
+  document.getElementById('ledger-output').style.display='block';
+  document.getElementById('ledger-output').scrollIntoView({behavior:'smooth'});
+  toast(`${pName} ledger generated ✓`);
+}
+
+function exportLedgerExcel(){
+  const from=document.getElementById('led-from').value;
+  const to=document.getElementById('led-to').value;
+  const platform=document.getElementById('led-platform').value;
+  const ob=parseFloat(document.getElementById('led-ob').value)||0;
+  const pName=platform==='pp'?'PhonePe':'Ufill';
+  const entries=db.entries.filter(e=>e.date>=from&&e.date<=to&&(e[platform]||0)>0).sort((a,b)=>a.date.localeCompare(b.date)||parseInt(a.shift)-parseInt(b.shift));
+  const received=db.received.filter(r=>r.date>=from&&r.date<=to&&(r[platform]||0)>0).sort((a,b)=>a.date.localeCompare(b.date));
+  const combined=[...entries.map(e=>({date:e.date,particulars:`Shift ${e.shift}`,amount:e[platform],type:'debit',ts:e.createdAt})),...received.map(r=>({date:r.date,particulars:r.note||'Credit Received',amount:r[platform],type:'credit',ts:r.savedAt}))].sort((a,b)=>a.date.localeCompare(b.date)||(a.ts||'').localeCompare(b.ts||''));
+  let bal=ob;
+  const data=[['Date','Particulars','Debit (₹)','Credit (₹)','Balance (₹)']];
+  data.push(['','OPENING BALANCE','','',ob]);
+  combined.forEach(e=>{
+    const isD=e.type==='debit';
+    if(isD)bal-=e.amount;else bal+=e.amount;
+    data.push([fmtDate(e.date),e.particulars,isD?e.amount:'',!isD?e.amount:'',bal]);
+  });
+  const totalDr=entries.reduce((s,e)=>s+(e[platform]||0),0),totalCr=received.reduce((s,r)=>s+(r[platform]||0),0);
+  data.push([]);data.push(['CLOSING BALANCE','','','' ,ob+totalCr-totalDr]);
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[12,20,14,14,14].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,ws,`${pName} Ledger`);
+  XLSX.writeFile(wb,`QR_${pName}_Ledger_${from}_to_${to}.xlsx`);
+  toast('Ledger Excel downloaded!');
+}
+
+function exportLedgerPDF(){
+  const from=document.getElementById('led-from').value;
+  const to=document.getElementById('led-to').value;
+  const platform=document.getElementById('led-platform').value;
+  const ob=parseFloat(document.getElementById('led-ob').value)||0;
+  const pName=platform==='pp'?'PhonePe':'Ufill';
+  const pColor=platform==='pp'?'#5B2EE8':'#F97316';
+  const entries=db.entries.filter(e=>e.date>=from&&e.date<=to&&(e[platform]||0)>0).sort((a,b)=>a.date.localeCompare(b.date)||parseInt(a.shift)-parseInt(b.shift));
+  const received=db.received.filter(r=>r.date>=from&&r.date<=to&&(r[platform]||0)>0).sort((a,b)=>a.date.localeCompare(b.date));
+  const combined=[...entries.map(e=>({date:e.date,particulars:`Shift ${e.shift}`,amount:e[platform],type:'debit',ts:e.createdAt})),...received.map(r=>({date:r.date,particulars:r.note||'Credit Received',amount:r[platform],type:'credit',ts:r.savedAt}))].sort((a,b)=>a.date.localeCompare(b.date)||(a.ts||'').localeCompare(b.ts||''));
+  const totalDr=entries.reduce((s,e)=>s+(e[platform]||0),0),totalCr=received.reduce((s,r)=>s+(r[platform]||0),0);
+  const cb=ob+totalCr-totalDr;
+  let bal=ob,rows='';
+  rows+=`<tr style="background:#EFF6FF;"><td colspan="3" style="font-weight:700;">OPENING BALANCE</td><td></td><td></td><td style="font-family:monospace;font-weight:700;color:${pColor};">₹${ob.toLocaleString('en-IN',{minimumFractionDigits:2})}</td></tr>`;
+  combined.forEach(e=>{
+    const isD=e.type==='debit';
+    if(isD)bal-=e.amount;else bal+=e.amount;
+    const bc=bal<0?'#DC2626':bal>0?'#0C3547':'#888';
+    rows+=`<tr><td>${fmtDate(e.date)}</td><td>${e.particulars}</td><td style="font-family:monospace;font-weight:700;color:#DC2626;">${isD?'₹'+e.amount.toLocaleString('en-IN',{minimumFractionDigits:2}):''}</td><td style="font-family:monospace;font-weight:700;color:#059669;">${!isD?'₹'+e.amount.toLocaleString('en-IN',{minimumFractionDigits:2}):''}</td><td style="font-family:monospace;font-weight:700;color:${bc};">₹${Math.abs(bal).toLocaleString('en-IN',{minimumFractionDigits:2})}${bal<0?' Dr':bal>0?' Cr':''}</td></tr>`;
+  });
+  rows+=`<tr style="background:#F5F7FA;font-weight:700;"><td colspan="2">SUB TOTAL</td><td style="font-family:monospace;color:#DC2626;">₹${totalDr.toLocaleString('en-IN',{minimumFractionDigits:2})}</td><td style="font-family:monospace;color:#059669;">₹${totalCr.toLocaleString('en-IN',{minimumFractionDigits:2})}</td><td></td></tr>
+  <tr style="background:#1A2332;color:#fff;font-weight:800;"><td colspan="4">CLOSING BALANCE</td><td style="font-family:monospace;color:${cb<0?'#FCA5A5':cb>0?'#6EE7B7':'#fff'};">₹${Math.abs(cb).toLocaleString('en-IN',{minimumFractionDigits:2})} ${cb<0?'Dr':cb>0?'Cr':''}</td></tr>`;
+  const w=window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>${pName} Ledger</title>
+  <style>body{font-family:Arial,sans-serif;font-size:12px;padding:24px;}h1{font-size:18px;margin-bottom:4px;color:${pColor};}
+  .meta{color:#888;font-size:11px;margin-bottom:14px;}.summary{display:flex;gap:10px;margin-bottom:16px;}
+  .sbox{border-radius:8px;padding:10px 14px;flex:1;text-align:center;}
+  .sval{font-size:15px;font-weight:700;font-family:monospace;}.slbl{font-size:10px;color:#888;text-transform:uppercase;margin-top:2px;}
+  table{width:100%;border-collapse:collapse;}th{background:${pColor};color:#fff;padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;}
+  td{padding:8px 10px;border-bottom:1px solid #eee;font-size:12px;}tr:nth-child(even) td{background:#F8FBFD;}
+  .btn{background:${pColor};color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:700;margin-top:18px;}
+  @media print{.btn{display:none;}}</style></head><body>
+  <h1>${platform==='pp'?'📱':'⛽'} ${pName.toUpperCase()} — TRANSACTION LEDGER</h1>
+  <div class="meta">Period: ${fmtDate(from)} to ${fmtDate(to)} · Generated: ${new Date().toLocaleString('en-IN')}</div>
+  <div class="summary">
+    <div class="sbox" style="background:#F5F7FA;"><div class="sval">₹${ob.toLocaleString('en-IN',{minimumFractionDigits:2})}</div><div class="slbl">Opening Balance</div></div>
+    <div class="sbox" style="background:#FEE2E2;"><div class="sval" style="color:#DC2626;">₹${totalDr.toLocaleString('en-IN',{minimumFractionDigits:2})}</div><div class="slbl">Total Debit</div></div>
+    <div class="sbox" style="background:#D1FAE5;"><div class="sval" style="color:#059669;">₹${totalCr.toLocaleString('en-IN',{minimumFractionDigits:2})}</div><div class="slbl">Total Credit</div></div>
+    <div class="sbox" style="background:#F5F7FA;"><div class="sval" style="color:${cb<0?'#DC2626':cb>0?'#059669':'#333'};">₹${Math.abs(cb).toLocaleString('en-IN',{minimumFractionDigits:2})}</div><div class="slbl">Closing Balance</div></div>
+  </div>
+  <table><thead><tr><th>Date</th><th>Particulars</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
+  <tbody>${rows}</tbody></table>
+  <button class="btn" onclick="window.print()">🖨 Print / Save PDF</button></body></html>`);
+  w.document.close();toast('PDF opened!');
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+loadFromSheet();
+</script>
+</body>
+</html>
