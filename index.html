@@ -220,6 +220,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div class="sync-dot"><div class="dot" id="sync-dot"></div><span id="sync-txt">Loading</span></div>
   </div>
   <div class="tabs">
+    <div class="tab" onclick="switchTab('dash')">🏠 Home</div>
     <div class="tab active" onclick="switchTab('dsm')">📥 DSM Entry</div>
     <div class="tab" onclick="switchTab('recv')">💰 Received</div>
     <div class="tab" onclick="switchTab('report')">📊 Report</div>
@@ -228,6 +229,49 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <!-- ═══ DSM ENTRY ═══ -->
+<!-- ═══ QR DASHBOARD ═══ -->
+<div class="page" id="page-dash">
+  <!-- PP Pending Hero -->
+  <div style="background:linear-gradient(135deg,#2D1B69,#4C2D99);border-radius:16px;padding:18px;margin-bottom:10px;color:#fff;">
+    <div style="font-size:10px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">📱 PhonePe Pending</div>
+    <div id="qd-pp-pending" style="font-size:32px;font-weight:800;font-family:'Roboto Mono',monospace;color:#C4B4F9;line-height:1;">₹0</div>
+  </div>
+  <!-- UF Pending Hero -->
+  <div style="background:linear-gradient(135deg,#7C3008,#C2540A);border-radius:16px;padding:18px;margin-bottom:13px;color:#fff;">
+    <div style="font-size:10px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">⛽ UFill Pending</div>
+    <div id="qd-uf-pending" style="font-size:32px;font-weight:800;font-family:'Roboto Mono',monospace;color:#FDC89A;line-height:1;">₹0</div>
+  </div>
+  <!-- Stats Grid -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:13px;">
+    <div style="background:#EDE8FD;border-radius:13px;padding:14px;border:1px solid #C4B4F9;">
+      <div style="font-size:18px;font-weight:700;font-family:'Roboto Mono',monospace;color:#5B2EE8;" id="qd-pp-total">₹0</div>
+      <div style="font-size:10px;color:#5B2EE8;text-transform:uppercase;letter-spacing:.5px;margin-top:3px;">PP Total</div>
+    </div>
+    <div style="background:#FEF0E6;border-radius:13px;padding:14px;border:1px solid #FDC89A;">
+      <div style="font-size:18px;font-weight:700;font-family:'Roboto Mono',monospace;color:#F97316;" id="qd-uf-total">₹0</div>
+      <div style="font-size:10px;color:#F97316;text-transform:uppercase;letter-spacing:.5px;margin-top:3px;">UF Total</div>
+    </div>
+    <div style="background:var(--card);border-radius:13px;padding:14px;border:1px solid var(--border);">
+      <div style="font-size:18px;font-weight:700;font-family:'Roboto Mono',monospace;color:#10B981;" id="qd-pp-recv">₹0</div>
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:3px;">PP Received</div>
+    </div>
+    <div style="background:var(--card);border-radius:13px;padding:14px;border:1px solid var(--border);">
+      <div style="font-size:18px;font-weight:700;font-family:'Roboto Mono',monospace;color:#10B981;" id="qd-uf-recv">₹0</div>
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:3px;">UF Received</div>
+    </div>
+  </div>
+  <!-- Today's entries -->
+  <div style="background:var(--card);border-radius:13px;border:1px solid var(--border);overflow:hidden;margin-bottom:13px;">
+    <div style="background:#1A2332;color:#fff;padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">📅 Today's Shifts</div>
+    <div id="qd-today-list"><div class="empty" style="padding:20px;"><div class="ico">📋</div><p>No entries today</p></div></div>
+  </div>
+  <!-- Quick Actions -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:13px;">
+    <button onclick="switchTab('dsm')" style="padding:14px;background:linear-gradient(135deg,#5B2EE8,#4C2D99);color:#fff;border:none;border-radius:11px;font-weight:700;font-size:14px;cursor:pointer;">📥 New Entry</button>
+    <button onclick="switchTab('recv')" style="padding:14px;background:linear-gradient(135deg,#F97316,#C2540A);color:#fff;border:none;border-radius:11px;font-weight:700;font-size:14px;cursor:pointer;">💰 Received</button>
+  </div>
+</div>
+
 <div class="page active" id="page-dsm">
   <div class="card">
     <div class="card-title">➕ New Shift Entry</div>
@@ -450,13 +494,13 @@ async function loadFromSheet(){
     db.entries=(remote.entries||[]).map(e=>({...e,date:normalizeDate(e.date),pp:Number(e.pp||0),uf:Number(e.uf||0)}));
     db.received=(remote.received||[]).map(r=>({...r,date:normalizeDate(r.date),pp:Number(r.pp||0),uf:Number(r.uf||0)}));
     setSyncStatus('ok');
-    refreshDSM();refreshRecv();
+    refreshDSM();refreshRecv();switchTab('dash');
   }catch(e){
     setSyncStatus('err');
     toast('Offline — using local data','err');
     const local=localStorage.getItem('qr_db');
     if(local)try{Object.assign(db,JSON.parse(local));}catch{}
-    refreshDSM();refreshRecv();
+    refreshDSM();refreshRecv();switchTab('dash');
   }
 }
 function saveLocal(){localStorage.setItem('qr_db',JSON.stringify(db));}
@@ -464,7 +508,7 @@ function saveLocal(){localStorage.setItem('qr_db',JSON.stringify(db));}
 // ── TABS ───────────────────────────────────────────────────────────────────
 function switchTab(tab){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['dsm','recv','report','ledger'][i]===tab));
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['dash','dsm','recv','report','ledger'][i]===tab));
   document.getElementById('page-'+tab).classList.add('active');
   if(tab==='recv')refreshRecv();
   if(tab==='report')refreshReport();
@@ -1051,6 +1095,38 @@ function exportLedgerPDF(){
 
 // ── INIT ───────────────────────────────────────────────────────────────────
 loadFromSheet();
+
+
+// ── QR DASHBOARD ──────────────────────────────────────────────────────────────
+function refreshQRDash(){
+  const mPP=computeMatch('pp');
+  const mUF=computeMatch('uf');
+  const today=new Date().toISOString().split('T')[0];
+
+  document.getElementById('qd-pp-pending').textContent=fmtAmt(mPP.pending);
+  document.getElementById('qd-uf-pending').textContent=fmtAmt(mUF.pending);
+  document.getElementById('qd-pp-total').textContent=fmtAmt(mPP.totalEntries);
+  document.getElementById('qd-uf-total').textContent=fmtAmt(mUF.totalEntries);
+  document.getElementById('qd-pp-recv').textContent=fmtAmt(mPP.totalReceived);
+  document.getElementById('qd-uf-recv').textContent=fmtAmt(mUF.totalReceived);
+
+  const todayE=db.entries.filter(e=>e.date===today).sort((a,b)=>parseInt(a.shift)-parseInt(b.shift));
+  const tl=document.getElementById('qd-today-list');
+  if(!todayE.length){
+    tl.innerHTML='<div class="empty" style="padding:20px;"><div class="ico">📋</div><p>No entries today</p></div>';
+    return;
+  }
+  tl.innerHTML=todayE.map(e=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border-bottom:1px solid var(--border);">
+      <div style="font-size:13px;font-weight:700;">Shift ${e.shift}</div>
+      <div style="display:flex;gap:12px;">
+        <span style="font-size:12px;font-weight:700;color:#5B2EE8;">PP ${fmtAmt(e.pp)}</span>
+        <span style="font-size:12px;font-weight:700;color:#F97316;">UF ${fmtAmt(e.uf)}</span>
+      </div>
+    </div>`).join('');
+}
+
+function fmtAmt(n){return'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});}
 
 // ── PWA ──────────────────────────────────────────────────────────────────────
 if('serviceWorker' in navigator){
