@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>QR Collections Manager</title>
+
+<!-- PWA -->
+<link rel="manifest" href="qr-manifest.json">
+<meta name="theme-color" content="#1A2332">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="QR Collect">
+<link rel="apple-touch-icon" href="qr-icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Roboto+Mono:wght@400;500;600;700&display=swap');
@@ -387,7 +396,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
-const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzyUloY82bSdbx5zTxmomgN5Rp9QTxfVYZkfv_rtu0NQv9vcidNjMb_oH9WNYh2Exgf/exec';
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbx3TsBrEbct7yxZxwguAp6JAmFFg639T5RxkhVQjsyfp5kusvjIOEek5jvtWXcfW4Xo0g/exec';
 const RESET_PIN = '1234'; // ← Change to your PIN
 const LOCAL_KEY = 'qr_active';
 
@@ -399,14 +408,6 @@ let db = { entries:[], received:[] };
 // ── UTILS ──────────────────────────────────────────────────────────────────
 function todayStr(){return new Date().toISOString().split('T')[0];}
 function fmtAmt(n){return'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});}
-function fmtTime(ts){
-  if(!ts)return'';
-  try{
-    const d=new Date(ts);
-    if(isNaN(d.getTime()))return'';
-    return d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
-  }catch{return'';}
-}
 function fmtDate(d){
   if(!d)return'—';const s=String(d);
   if(s.includes('/')){return s;}
@@ -431,26 +432,14 @@ function setSyncStatus(s){
   else if(s==='err'){dot.className='dot err';txt.textContent='Offline';}
 }
 async function apiGet(action){
-  return new Promise((resolve,reject)=>{
-    const s=document.createElement('script');
-    const cb='_cb'+Date.now();
-    window[cb]=(data)=>{resolve(data);delete window[cb];s.remove();};
-    s.onerror=()=>{reject(new Error('failed'));s.remove();};
-    s.src=`${SHEET_URL}?action=${action}&callback=${cb}`;
-    document.head.appendChild(s);
-    setTimeout(()=>{if(window[cb]){delete window[cb];s.remove();reject(new Error('timeout'));}},10000);
-  });
+  const r=await fetch(`${SHEET_URL}?action=${action}`,{redirect:'follow'});
+  return r.json();
 }
 async function apiPost(payload){
-  return new Promise((resolve)=>{
-    const s=document.createElement('script');
-    const cb='_cb'+Date.now();
-    window[cb]=(data)=>{resolve(data);delete window[cb];s.remove();};
-    s.onerror=()=>{resolve({success:true});s.remove();};
-    s.src=`${SHEET_URL}?payload=${encodeURIComponent(JSON.stringify(payload))}&callback=${cb}`;
-    document.head.appendChild(s);
-    setTimeout(()=>{if(window[cb]){delete window[cb];s.remove();resolve({success:true});}},10000);
-  });
+  // Use no-cors mode with GET workaround for Apps Script
+  const url=`${SHEET_URL}?payload=${encodeURIComponent(JSON.stringify(payload))}`;
+  const r=await fetch(url,{redirect:'follow'});
+  return r.json();
 }
 
 async function loadFromSheet(){
@@ -545,7 +534,7 @@ function refreshDSM(){
 function entryHTML(e,showDel){
   return`<div class="entry-item">
     <div class="entry-header">
-      <div><span class="shift-badge">🕐 Shift ${e.shift}</span><div class="entry-date">📅 ${fmtDate(e.date)}${e.createdAt?' · ⏱ '+fmtTime(e.createdAt):''}</div></div>
+      <div><span class="shift-badge">🕐 Shift ${e.shift}</span><div class="entry-date">📅 ${fmtDate(e.date)}</div></div>
       <div style="font-size:12px;font-weight:700;color:var(--muted);">${fmtAmt((e.pp||0)+(e.uf||0))} total</div>
     </div>
     <div class="entry-amounts">
@@ -638,7 +627,7 @@ function refreshRecv(){
   document.getElementById('recv-list').innerHTML=sorted.length?sorted.map(r=>`
     <div class="entry-item">
       <div class="entry-header">
-        <div><span class="shift-badge">💳 Received</span><div class="entry-date">📅 ${fmtDate(r.date)}${r.note?' · '+r.note:''}${r.savedAt?' · ⏱ '+fmtTime(r.savedAt):''}</div></div>
+        <div><span class="shift-badge">💳 Received</span><div class="entry-date">📅 ${fmtDate(r.date)}${r.note?' · '+r.note:''}</div></div>
       </div>
       <div class="entry-amounts">
         <div class="amt-box uf"><div class="amt-lbl">⛽ Ufill</div><div class="amt-val">${fmtAmt(r.uf)}</div></div>
@@ -1062,6 +1051,62 @@ function exportLedgerPDF(){
 
 // ── INIT ───────────────────────────────────────────────────────────────────
 loadFromSheet();
+
+// ── PWA ──────────────────────────────────────────────────────────────────────
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('qr-sw.js')
+      .then(r=>console.log('QR SW registered'))
+      .catch(e=>console.log('QR SW error:',e));
+  });
+}
+
+let _qrInstallPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();
+  _qrInstallPrompt=e;
+  setTimeout(showQRInstallBanner,3000);
+});
+
+function showQRInstallBanner(){
+  if(!_qrInstallPrompt) return;
+  if(window.matchMedia('(display-mode: standalone)').matches) return;
+  const banner=document.createElement('div');
+  banner.id='qr-install-banner';
+  banner.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1A2332;color:#fff;padding:12px 18px;border-radius:14px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.4);z-index:998;max-width:340px;width:calc(100% - 32px);';
+  banner.innerHTML=`
+    <img src="qr-icon-192.png" style="width:36px;height:36px;border-radius:8px;flex-shrink:0;">
+    <div style="flex:1;">
+      <div style="font-size:13px;font-weight:700;">Install QR Collections</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.6);">Add to home screen for quick access</div>
+    </div>
+    <button onclick="doQRInstall()" style="background:#5B2EE8;border:none;color:#fff;font-weight:800;padding:8px 14px;border-radius:9px;cursor:pointer;font-size:12px;white-space:nowrap;">Install</button>
+    <button onclick="document.getElementById('qr-install-banner').remove()" style="background:transparent;border:none;color:rgba(255,255,255,.5);font-size:18px;cursor:pointer;padding:0 4px;">×</button>
+  `;
+  document.body.appendChild(banner);
+  setTimeout(()=>banner&&banner.remove(),8000);
+}
+
+async function doQRInstall(){
+  if(!_qrInstallPrompt) return;
+  _qrInstallPrompt.prompt();
+  const {outcome}=await _qrInstallPrompt.userChoice;
+  _qrInstallPrompt=null;
+  document.getElementById('qr-install-banner')?.remove();
+  if(outcome==='accepted') toast && toast('App installed! Check your home screen ✅');
+}
+
+// iOS hint
+if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.navigator.standalone){
+  setTimeout(()=>{
+    const b=document.createElement('div');
+    b.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1A2332;color:#fff;padding:12px 16px;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.4);z-index:998;max-width:320px;width:calc(100% - 32px);text-align:center;';
+    b.innerHTML=`<img src="qr-icon-192.png" style="width:48px;height:48px;border-radius:12px;margin-bottom:8px;"><div style="font-size:13px;font-weight:700;margin-bottom:4px;">Install QR Collections</div><div style="font-size:11px;color:rgba(255,255,255,.65);line-height:1.5;">Tap <strong>Share</strong> (□↑) then <strong>"Add to Home Screen"</strong></div><button onclick="this.parentElement.remove()" style="margin-top:10px;background:rgba(255,255,255,.15);border:none;color:#fff;padding:7px 20px;border-radius:8px;cursor:pointer;font-size:12px;">Got it</button>`;
+    document.body.appendChild(b);
+    setTimeout(()=>b&&b.remove(),10000);
+  },3000);
+}
+
 </script>
 </body>
 </html>
