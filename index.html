@@ -494,13 +494,13 @@ async function loadFromSheet(){
     db.entries=(remote.entries||[]).map(e=>({...e,date:normalizeDate(e.date),pp:Number(e.pp||0),uf:Number(e.uf||0)}));
     db.received=(remote.received||[]).map(r=>({...r,date:normalizeDate(r.date),pp:Number(r.pp||0),uf:Number(r.uf||0)}));
     setSyncStatus('ok');
-    refreshDSM();refreshRecv();switchTab('dash');
+    refreshDSM();refreshRecv();refreshQRDash();switchTab('dash');
   }catch(e){
     setSyncStatus('err');
     toast('Offline — using local data','err');
     const local=localStorage.getItem('qr_db');
     if(local)try{Object.assign(db,JSON.parse(local));}catch{}
-    refreshDSM();refreshRecv();switchTab('dash');
+    refreshDSM();refreshRecv();refreshQRDash();switchTab('dash');
   }
 }
 function saveLocal(){localStorage.setItem('qr_db',JSON.stringify(db));}
@@ -510,6 +510,7 @@ function switchTab(tab){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['dash','dsm','recv','report','ledger'][i]===tab));
   document.getElementById('page-'+tab).classList.add('active');
+  if(tab==='dash')refreshQRDash();
   if(tab==='recv')refreshRecv();
   if(tab==='report')refreshReport();
   if(tab==='ledger'){
@@ -1126,7 +1127,7 @@ function refreshQRDash(){
     </div>`).join('');
 }
 
-function fmtAmt(n){return'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
 
 // ── PWA ──────────────────────────────────────────────────────────────────────
 if('serviceWorker' in navigator){
