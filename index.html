@@ -417,7 +417,14 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
       <label>Opening Balance (₹)</label>
       <input type="number" id="led-ob" placeholder="0.00" step="0.01" min="0">
     </div>
-    <button class="btn btn-primary" onclick="generateLedger()">📒 Generate Ledger</button>
+    <button class="btn btn-primary" onclick="generateLedger()" style="width:100%;margin-bottom:6px;">📒 Generate Ledger</button>
+    <button class="btn" onclick="generateQRMonthSummary()" style="width:100%;margin-bottom:6px;background:#10B981;color:#fff;border:none;border-radius:9px;padding:10px;cursor:pointer;font-weight:700;">📅 Month-wise Summary</button>
+    <button class="btn" onclick="exportQRExcel(document.getElementById('led-from').value,document.getElementById('led-to').value)" style="width:100%;margin-bottom:6px;background:#1D6F42;color:#fff;border:none;border-radius:9px;padding:10px;cursor:pointer;font-weight:700;">📊 Export Excel (.xlsx)</button>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button onclick="backupQRData()" style="flex:1;background:#6B7280;color:#fff;border:none;border-radius:9px;padding:10px;cursor:pointer;font-weight:700;">⬇ Backup</button>
+      <button onclick="document.getElementById('qr-restore-input').click()" style="flex:1;background:#6B7280;color:#fff;border:none;border-radius:9px;padding:10px;cursor:pointer;font-weight:700;">⬆ Restore</button>
+      <input type="file" id="qr-restore-input" accept=".json" style="display:none;" onchange="restoreQRData(this)">
+    </div>
   </div>
   <div id="ledger-output" style="display:none;">
     <div id="led-banner" style="background:#1A2332;border-radius:13px;padding:15px 16px;margin-bottom:13px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
@@ -494,13 +501,13 @@ async function loadFromSheet(){
     db.entries=(remote.entries||[]).map(e=>({...e,date:normalizeDate(e.date),pp:Number(e.pp||0),uf:Number(e.uf||0)}));
     db.received=(remote.received||[]).map(r=>({...r,date:normalizeDate(r.date),pp:Number(r.pp||0),uf:Number(r.uf||0)}));
     setSyncStatus('ok');
-    refreshDSM();refreshRecv();refreshQRDash();switchTab('dash');
+    refreshDSM();refreshRecv();refreshQRDash();switchTab('dash');requestQRNotif();
   }catch(e){
     setSyncStatus('err');
     toast('Offline — using local data','err');
     const local=localStorage.getItem('qr_db');
     if(local)try{Object.assign(db,JSON.parse(local));}catch{}
-    refreshDSM();refreshRecv();refreshQRDash();switchTab('dash');
+    refreshDSM();refreshRecv();refreshQRDash();switchTab('dash');requestQRNotif();
   }
 }
 function saveLocal(){localStorage.setItem('qr_db',JSON.stringify(db));}
@@ -874,8 +881,7 @@ function exportPDF(){
       <td style="color:${ppC};font-weight:700;">${showPP?(ppS==='settled'?'🟢 Settled':ppS==='partial'?'🟡 Partial':'🔴 Pending'):'—'}</td>
     </tr>`;
   });
-  const w=window.open('','_blank');
-  w.document.write(`<!DOCTYPE html><html><head><title>QR Collections Report</title>
+  const _pw=window.open('','_blank');if(_pw){_pw.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>QR Collections Report</title>
   <style>body{font-family:Arial,sans-serif;font-size:12px;padding:24px;color:#1A2332;}
   h1{font-size:20px;font-weight:800;margin-bottom:4px;}
   .meta{color:#8A97AA;font-size:11px;margin-bottom:16px;}
@@ -899,8 +905,7 @@ function exportPDF(){
   <tbody>${rows}</tbody>
   <tfoot><tr><td colspan="2">TOTAL (${entries.length})</td><td style="color:#F97316;font-family:monospace;">₹${totalUF.toLocaleString('en-IN',{minimumFractionDigits:2})}</td><td></td><td style="color:#5B2EE8;font-family:monospace;">₹${totalPP.toLocaleString('en-IN',{minimumFractionDigits:2})}</td><td></td></tr></tfoot></table>
   <button class="btn" onclick="window.print()">🖨 Print / Save PDF</button>
-  </body></html>`);
-  w.document.close();toast('PDF opened!');
+  </body></html>`);_pw.document.close();}toast('PDF opened!');
 }
 
 // ── MODAL ──────────────────────────────────────────────────────────────────
@@ -1070,8 +1075,7 @@ function exportLedgerPDF(){
   });
   rows+=`<tr style="background:#F5F7FA;font-weight:700;"><td colspan="2">SUB TOTAL</td><td style="font-family:monospace;color:#DC2626;">₹${totalDr.toLocaleString('en-IN',{minimumFractionDigits:2})}</td><td style="font-family:monospace;color:#059669;">₹${totalCr.toLocaleString('en-IN',{minimumFractionDigits:2})}</td><td></td></tr>
   <tr style="background:#1A2332;color:#fff;font-weight:800;"><td colspan="4">CLOSING BALANCE</td><td style="font-family:monospace;color:${cb<0?'#FCA5A5':cb>0?'#6EE7B7':'#fff'};">₹${Math.abs(cb).toLocaleString('en-IN',{minimumFractionDigits:2})} ${cb<0?'Dr':cb>0?'Cr':''}</td></tr>`;
-  const w=window.open('','_blank');
-  w.document.write(`<!DOCTYPE html><html><head><title>${pName} Ledger</title>
+  const _pw=window.open('','_blank');if(_pw){_pw.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${pName} Ledger</title>
   <style>body{font-family:Arial,sans-serif;font-size:12px;padding:24px;}h1{font-size:18px;margin-bottom:4px;color:${pColor};}
   .meta{color:#888;font-size:11px;margin-bottom:14px;}.summary{display:flex;gap:10px;margin-bottom:16px;}
   .sbox{border-radius:8px;padding:10px 14px;flex:1;text-align:center;}
@@ -1090,8 +1094,7 @@ function exportLedgerPDF(){
   </div>
   <table><thead><tr><th>Date</th><th>Particulars</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
   <tbody>${rows}</tbody></table>
-  <button class="btn" onclick="window.print()">🖨 Print / Save PDF</button></body></html>`);
-  w.document.close();toast('PDF opened!');
+  <button class="btn" onclick="window.print()">🖨 Print / Save PDF</button></body></html>`);_pw.document.close();}toast('PDF opened!');
 }
 
 // ── INIT ───────────────────────────────────────────────────────────────────
@@ -1129,6 +1132,118 @@ function refreshQRDash(){
 
 
 
+
+// ── QR PULL TO REFRESH ───────────────────────────────────────────────────────
+let _qPtrStart=0,_qPtrActive=false;
+document.addEventListener('touchstart',e=>{if(window.scrollY===0)_qPtrStart=e.touches[0].clientY;},{passive:true});
+document.addEventListener('touchend',e=>{
+  const dy=e.changedTouches[0].clientY-_qPtrStart;
+  if(dy>80&&window.scrollY===0&&!_qPtrActive){
+    _qPtrActive=true;
+    toast('↓ Syncing...');
+    loadFromSheet().finally(()=>{_qPtrActive=false;});
+  }
+  _qPtrStart=0;
+},{passive:true});
+
+// ── QR MONTH SUMMARY ─────────────────────────────────────────────────────────
+function generateQRMonthSummary(){
+  const entries=db.entries;
+  const months={};
+  entries.forEach(e=>{
+    const mo=e.date.slice(0,7);
+    if(!months[mo])months[mo]={pp:0,uf:0,count:0};
+    months[mo].pp+=e.pp||0;months[mo].uf+=e.uf||0;months[mo].count++;
+  });
+  const recvByMonth={};
+  db.received.forEach(r=>{
+    const mo=r.date.slice(0,7);
+    if(!recvByMonth[mo])recvByMonth[mo]={pp:0,uf:0};
+    recvByMonth[mo].pp+=r.pp||0;recvByMonth[mo].uf+=r.uf||0;
+  });
+  const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const rows=Object.keys(months).sort().map(mo=>{
+    const d=months[mo],r=recvByMonth[mo]||{pp:0,uf:0};
+    const[y,m2]=mo.split('-');
+    return`<tr><td><strong>${monthNames[parseInt(m2)-1]} ${y}</strong></td>
+    <td style="color:#5B2EE8;font-family:monospace;">₹${d.pp.toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+    <td style="color:#F97316;font-family:monospace;">₹${d.uf.toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+    <td style="color:#10B981;font-family:monospace;">₹${r.pp.toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+    <td style="color:#10B981;font-family:monospace;">₹${r.uf.toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+    <td style="color:#EF4444;font-family:monospace;">₹${Math.max(0,d.pp-r.pp).toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+    <td style="color:#EF4444;font-family:monospace;">₹${Math.max(0,d.uf-r.uf).toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+    <td>${d.count}</td></tr>`;
+  }).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>QR Month Summary</title>
+  <style>body{font-family:Arial;font-size:11px;padding:16px;}table{width:100%;border-collapse:collapse;}
+  th{background:#1A2332;color:#fff;padding:7px;font-size:10px;}td{padding:7px;border-bottom:1px solid #ddd;}
+  .btn{background:#6B7280;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;margin-right:8px;font-weight:700;}
+  @media print{.btn{display:none;}}</style></head><body>
+  <div style="margin-bottom:14px;"><button class="btn" onclick="window.close()">← Back</button><button class="btn" style="background:#1A2332;" onclick="window.print()">🖨 Print</button></div>
+  <h2>📱 QR Collections — Month Summary</h2>
+  <table><thead><tr><th>Month</th><th>PP Total</th><th>UF Total</th><th>PP Recv</th><th>UF Recv</th><th>PP Pending</th><th>UF Pending</th><th>Shifts</th></tr></thead>
+  <tbody>${rows}</tbody></table></body></html>`;
+  const _mw=window.open('','_blank');if(_mw){_mw.document.write(html);_mw.document.close();}
+  toast('Month summary opened');
+}
+
+// ── QR BACKUP / RESTORE ──────────────────────────────────────────────────────
+function backupQRData(){
+  const data={version:1,exportedAt:new Date().toISOString(),entries:db.entries,received:db.received};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`QR_Backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast('Backup downloaded ✅');
+}
+async function restoreQRData(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.entries)return toast('Invalid backup','err');
+      if(!confirm(`Restore ${data.entries.length} entries?`))return;
+      const existIds=new Set(db.entries.map(e=>e.id));
+      let added=0;
+      for(const en of data.entries){
+        if(!existIds.has(en.id)){db.entries.push(en);await apiPost({action:'saveEntry',data:en});added++;}
+      }
+      saveLocal();refreshDSM();refreshRecv();refreshQRDash();
+      toast(`Restored +${added} entries ✅`);
+    }catch(err){toast('Restore failed','err');}
+  };
+  reader.readAsText(file);input.value='';
+}
+
+// ── QR EXCEL EXPORT ──────────────────────────────────────────────────────────
+async function exportQRExcel(from,to){
+  if(typeof XLSX==='undefined'){
+    await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+  }
+  const entries=db.entries.filter(e=>(!from||e.date>=from)&&(!to||e.date<=to)).sort((a,b)=>a.date.localeCompare(b.date));
+  const recv=db.received.filter(r=>(!from||r.date>=from)&&(!to||r.date<=to));
+  const eRows=[['Date','Shift','PhonePe (PP)','UFill (UF)','Total','Created At']];
+  entries.forEach(e=>eRows.push([e.date,e.shift,e.pp,e.uf,(e.pp||0)+(e.uf||0),e.createdAt||'']));
+  const rRows=[['Date','PP Received','UF Received','Note','Saved At']];
+  recv.forEach(r=>rRows.push([r.date,r.pp,r.uf,r.note||'',r.savedAt||'']));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(eRows),'Entries');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rRows),'Received');
+  XLSX.writeFile(wb,`QR_Collections_${from||'all'}_to_${to||'all'}.xlsx`);
+  toast('Excel downloaded ✅');
+}
+
+// ── QR NOTIFICATIONS ─────────────────────────────────────────────────────────
+function requestQRNotif(){
+  if('Notification' in window&&Notification.permission==='default')
+    Notification.requestPermission().then(p=>{if(p==='granted')toast('Notifications enabled ✅');});
+}
+function sendQRNotif(body){
+  if(Notification.permission==='granted')
+    new Notification('QR Collections',{body,icon:'/qr-collections/qr-icon-192.png',tag:'qr-entry'});
+}
 // ── PWA ──────────────────────────────────────────────────────────────────────
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
