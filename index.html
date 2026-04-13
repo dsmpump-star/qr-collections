@@ -580,7 +580,7 @@ function refreshDSM(){
   document.getElementById('recent-count').textContent=recentE.length?`${recentE.length} entries`:'';
   if(!recentE.length){document.getElementById('dsm-recent').innerHTML='';return;}
   const g={};recentE.forEach(e=>{if(!g[e.date])g[e.date]=[];g[e.date].push(e);});
-  document.getElementById('dsm-recent').innerHTML=Object.entries(g).map(([d,es])=>`<div class="dg-hdr">📅 ${fmtDate(d)}</div>`+es.map(e=>entryHTML(e,false)).join('')).join('');
+  document.getElementById('dsm-recent').innerHTML=Object.entries(g).map(([d,es])=>`<div class="dg-hdr">📅 ${fmtDate(d)}</div>`+es.map(e=>entryHTML(e,true)).join('')).join('');
 }
 
 function entryHTML(e,showDel){
