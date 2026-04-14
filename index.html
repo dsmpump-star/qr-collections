@@ -273,9 +273,15 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <button onclick="switchTab('dsm')" style="padding:14px;background:linear-gradient(135deg,#5B2EE8,#4C2D99);color:#fff;border:none;border-radius:11px;font-weight:700;font-size:14px;cursor:pointer;">📥 New Entry</button>
     <button onclick="switchTab('recv')" style="padding:14px;background:linear-gradient(135deg,#F97316,#C2540A);color:#fff;border:none;border-radius:11px;font-weight:700;font-size:14px;cursor:pointer;">💰 Received</button>
   </div>
-  <!-- Notification Button — always visible, tap to enable -->
-  <button onclick="enableNotifications()" id="notif-btn" style="width:100%;background:#1A2332;color:#fff;border:none;border-radius:11px;padding:13px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:13px;">
-    <span>🔔</span><span id="notif-btn-text">Tap to Enable Notifications on this Device</span>
+  <!-- Notification Toggle Button -->
+  <button onclick="toggleNotifications()" id="notif-btn" style="width:100%;background:#1A2332;color:#fff;border:none;border-radius:11px;padding:13px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span id="notif-icon">🔔</span>
+      <span id="notif-btn-text">Tap to Enable Notifications</span>
+    </div>
+    <div id="notif-toggle" style="width:44px;height:24px;border-radius:12px;background:#374151;position:relative;transition:background .2s;flex-shrink:0;">
+      <div id="notif-knob" style="width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;"></div>
+    </div>
   </button>
 </div>
 
@@ -1283,62 +1289,82 @@ let _fbApp = null;
 let _fbMessaging = null;
 let _fcmToken = null;
 
-async function enableNotifications(){
-  const btn=document.getElementById('notif-btn');
+function setNotifToggle(enabled){
+  const toggle=document.getElementById('notif-toggle');
+  const knob=document.getElementById('notif-knob');
   const txt=document.getElementById('notif-btn-text');
-  if(txt) txt.textContent='⏳ Setting up...';
-  try{
-    // Step 1: Check if notifications supported
-    if(typeof Notification==='undefined'){
-      if(txt) txt.textContent='❌ Notifications not supported on this browser';
-      return;
-    }
+  const icon=document.getElementById('notif-icon');
+  const btn=document.getElementById('notif-btn');
+  if(enabled){
+    if(toggle) toggle.style.background='#10B981';
+    if(knob) knob.style.left='22px';
+    if(txt) txt.textContent='Notifications Enabled';
+    if(icon) icon.textContent='🔔';
+    if(btn) btn.style.background='#0B1E3D';
+  } else {
+    if(toggle) toggle.style.background='#374151';
+    if(knob) knob.style.left='2px';
+    if(txt) txt.textContent='Notifications Disabled — tap to enable';
+    if(icon) icon.textContent='🔕';
+    if(btn) btn.style.background='#1A2332';
+  }
+  localStorage.setItem('qr_notif_enabled', enabled?'1':'0');
+}
 
-    // Step 2: Request permission
-    const perm = await Notification.requestPermission();
-    if(perm !== 'granted'){
-      if(txt) txt.textContent='❌ Permission denied — check browser settings';
-      return;
-    }
+async function toggleNotifications(){
+  const isEnabled=localStorage.getItem('qr_notif_enabled')==='1'&&_fcmToken;
+  const txt=document.getElementById('notif-btn-text');
 
-    // Step 3: Check service worker
-    if(!('serviceWorker' in navigator)){
-      if(txt) txt.textContent='❌ Service Worker not supported';
-      return;
+  if(isEnabled){
+    // DISABLE — unregister token from worker
+    try{
+      if(_fcmToken){
+        await fetch(FCM_REGISTER_URL.replace('/register','/unregister'),{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({token:_fcmToken})
+        });
+      }
+    }catch(e){}
+    _fcmToken=null;
+    localStorage.removeItem('qr_fcm_token');
+    setNotifToggle(false);
+    toast('Notifications disabled 🔕');
+  } else {
+    // ENABLE
+    if(txt) txt.textContent='⏳ Enabling...';
+    try{
+      if(typeof Notification==='undefined'){
+        if(txt) txt.textContent='❌ Not supported on this browser';
+        return;
+      }
+      const perm=await Notification.requestPermission();
+      if(perm!=='granted'){
+        if(txt) txt.textContent='❌ Permission denied — check settings';
+        return;
+      }
+      await initFirebase();
+      if(_fcmToken){
+        setNotifToggle(true);
+        toast('Notifications enabled 🔔');
+      } else {
+        if(txt) txt.textContent='❌ Could not get token — try again';
+      }
+    }catch(e){
+      if(txt) txt.textContent='❌ Error: '+e.message;
     }
-
-    // Step 4: Init Firebase + get token
-    if(txt) txt.textContent='⏳ Getting device token...';
-    await initFirebase();
-
-    if(_fcmToken){
-      if(btn) btn.style.background='#10B981';
-      if(txt) txt.textContent='✅ Notifications Enabled on this Device';
-    } else {
-      if(txt) txt.textContent='❌ Could not get device token — try again';
-    }
-  }catch(e){
-    console.error('enableNotifications error:', e);
-    if(txt) txt.textContent='❌ Error: '+e.message;
   }
 }
 
 function checkNotifBanner(){
-  const btn=document.getElementById('notif-btn');
-  const txt=document.getElementById('notif-btn-text');
-  if(!btn||!txt) return;
-  if(typeof Notification==='undefined'){
-    // iPhone Safari without permission support
-    txt.textContent='🔔 Tap to Enable Notifications';
-    return;
-  }
-  if(Notification.permission==='granted'){
-    btn.style.background='#10B981';
-    txt.textContent='✅ Notifications Enabled on this Device';
-  } else if(Notification.permission==='denied'){
-    txt.textContent='❌ Blocked — enable in iPhone Settings > Safari';
+  const enabled=localStorage.getItem('qr_notif_enabled')==='1';
+  const denied=typeof Notification!=='undefined'&&Notification.permission==='denied';
+  if(denied){
+    const txt=document.getElementById('notif-btn-text');
+    if(txt) txt.textContent='❌ Blocked — enable in iPhone Settings > Notifications';
+    setNotifToggle(false);
   } else {
-    txt.textContent='🔔 Tap to Enable Notifications on this Device';
+    setNotifToggle(enabled&&!!_fcmToken);
   }
 }
 
@@ -1377,23 +1403,17 @@ async function initFirebase(){
     if(_fcmToken){
       console.log('FCM token obtained:', _fcmToken.slice(0,20)+'...');
       await registerFCMToken(_fcmToken);
-      toast('Notifications enabled ✅');
+      setNotifToggle(true);
     } else {
       console.error('No FCM token returned');
       toast('No token returned — check Firebase setup','err');
     }
 
-    // Handle foreground messages
+    // Handle foreground messages — show toast only (SW handles native notification)
     _fbMessaging.onMessage(payload => {
       const { title, body } = payload.notification || {};
       toast((title || 'QR Collections') + ': ' + (body || ''));
-      if(Notification.permission === 'granted'){
-        new Notification(title || 'QR Collections', {
-          body: body || '',
-          icon: '/qr-collections/qr-icon-192.png',
-          tag: 'qr-fg'
-        });
-      }
+      // Do NOT show native notification here — SW already handles it
     });
 
     // Token refresh handled automatically by SDK
