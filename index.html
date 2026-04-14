@@ -205,6 +205,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .export-row{display:flex;gap:9px;margin-bottom:16px;}
 .export-row .btn{flex:1;padding:12px;font-size:13px;}
 </style>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
 </head>
 <body>
 
@@ -501,13 +505,13 @@ async function loadFromSheet(){
     db.entries=(remote.entries||[]).map(e=>({...e,date:normalizeDate(e.date),pp:Number(e.pp||0),uf:Number(e.uf||0)}));
     db.received=(remote.received||[]).map(r=>({...r,date:normalizeDate(r.date),pp:Number(r.pp||0),uf:Number(r.uf||0)}));
     setSyncStatus('ok');
-    refreshDSM();refreshRecv();refreshQRDash();switchTab('dash');requestQRNotif();
+    refreshDSM();refreshRecv();refreshQRDash();switchTab('dash');initFirebase();
   }catch(e){
     setSyncStatus('err');
     toast('Offline — using local data','err');
     const local=localStorage.getItem('qr_db');
     if(local)try{Object.assign(db,JSON.parse(local));}catch{}
-    refreshDSM();refreshRecv();refreshQRDash();switchTab('dash');requestQRNotif();
+    refreshDSM();refreshRecv();refreshQRDash();switchTab('dash');initFirebase();
   }
 }
 function saveLocal(){localStorage.setItem('qr_db',JSON.stringify(db));}
@@ -569,6 +573,7 @@ async function saveDSM(){
   setSyncStatus('syncing');
   await apiPost({action:'saveEntry',data:entry});
   setSyncStatus('ok');
+  sendPushNotification('📱 QR Entry Saved',`Shift ${shift} — PP: ${fmtAmt(pp)} | UF: ${fmtAmt(uf)} · ${fmtDate(date)}`);
 }
 
 function refreshDSM(){
@@ -664,6 +669,7 @@ async function saveRecv(){
   setSyncStatus('syncing');
   await apiPost({action:'saveReceived',data:entry});
   setSyncStatus('ok');
+  sendPushNotification('💰 QR Received',`PP: ${fmtAmt(pp)} | UF: ${fmtAmt(uf)} · ${fmtDate(date)}`);
 }
 
 function refreshRecv(){
@@ -893,7 +899,11 @@ function exportPDF(){
   td{padding:9px 10px;border-bottom:1px solid #E4E8EF;font-size:12px;}
   tfoot td{background:#F5F7FA!important;font-weight:700;}
   .btn{background:#1A2332;color:#fff;border:none;padding:10px 22px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;margin-top:20px;}
-  @media print{.btn{display:none;}}</style></head><body>
+  @media print{.btn{display:none;}}</style>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
+</head><body>
   <h1>📱⛽ QR Collections Report</h1>
   <div class="meta">Generated: ${new Date().toLocaleString('en-IN')}</div>
   <div class="summary">
@@ -1083,7 +1093,11 @@ function exportLedgerPDF(){
   table{width:100%;border-collapse:collapse;}th{background:${pColor};color:#fff;padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;}
   td{padding:8px 10px;border-bottom:1px solid #eee;font-size:12px;}tr:nth-child(even) td{background:#F8FBFD;}
   .btn{background:${pColor};color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:700;margin-top:18px;}
-  @media print{.btn{display:none;}}</style></head><body>
+  @media print{.btn{display:none;}}</style>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
+</head><body>
   <h1>${platform==='pp'?'📱':'⛽'} ${pName.toUpperCase()} — TRANSACTION LEDGER</h1>
   <div class="meta">Period: ${fmtDate(from)} to ${fmtDate(to)} · Generated: ${new Date().toLocaleString('en-IN')}</div>
   <div class="summary">
@@ -1178,7 +1192,11 @@ function generateQRMonthSummary(){
   <style>body{font-family:Arial;font-size:11px;padding:16px;}table{width:100%;border-collapse:collapse;}
   th{background:#1A2332;color:#fff;padding:7px;font-size:10px;}td{padding:7px;border-bottom:1px solid #ddd;}
   .btn{background:#6B7280;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;margin-right:8px;font-weight:700;}
-  @media print{.btn{display:none;}}</style></head><body>
+  @media print{.btn{display:none;}}</style>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
+</head><body>
   <div style="margin-bottom:14px;"><button class="btn" onclick="window.close()">← Back</button><button class="btn" style="background:#1A2332;" onclick="window.print()">🖨 Print</button></div>
   <h2>📱 QR Collections — Month Summary</h2>
   <table><thead><tr><th>Month</th><th>PP Total</th><th>UF Total</th><th>PP Recv</th><th>UF Recv</th><th>PP Pending</th><th>UF Pending</th><th>Shifts</th></tr></thead>
@@ -1244,10 +1262,112 @@ function sendQRNotif(body){
   if(Notification.permission==='granted')
     new Notification('QR Collections',{body,icon:'/qr-collections/qr-icon-192.png',tag:'qr-entry'});
 }
+
+// ── FIREBASE PUSH NOTIFICATIONS ───────────────────────────────────────────────
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyA_nJVzzbNsTLwNGwxZaf8RpaniXDMETFM",
+  authDomain: "dsm-qr-notifications.firebaseapp.com",
+  projectId: "dsm-qr-notifications",
+  storageBucket: "dsm-qr-notifications.firebasestorage.app",
+  messagingSenderId: "522523299808",
+  appId: "1:522523299808:web:9f86a2eafa2fe054446585"
+};
+const VAPID_KEY = "BI8fg36cBZWQzgMHQeJITrT5aVafyWJPAWXHRZcL0zCTzW2xPWgdtyRLRUMvMka5m5_L2RRJa5K_nu7p6xhg9wY";
+
+// Cloud Function URLs (update after deploying functions)
+const FCM_REGISTER_URL = "https://us-central1-dsm-qr-notifications.cloudfunctions.net/registerToken";
+const FCM_NOTIFY_URL   = "https://us-central1-dsm-qr-notifications.cloudfunctions.net/notifyEntry";
+
+let _fbApp = null;
+let _fbMessaging = null;
+let _fcmToken = null;
+
+async function initFirebase(){
+  try {
+    if(!firebase.apps.length){
+      _fbApp = firebase.initializeApp(FIREBASE_CONFIG);
+    } else {
+      _fbApp = firebase.app();
+    }
+    _fbMessaging = firebase.messaging();
+
+    // Request permission
+    const permission = await Notification.requestPermission();
+    if(permission !== 'granted'){
+      console.log('Notification permission denied');
+      return;
+    }
+
+    // Get FCM token
+    _fcmToken = await _fbMessaging.getToken({ vapidKey: VAPID_KEY });
+    if(_fcmToken){
+      console.log('FCM token obtained');
+      // Register token with our Cloud Function
+      await registerFCMToken(_fcmToken);
+      toast('Notifications enabled ✅');
+    }
+
+    // Handle foreground messages (app open)
+    _fbMessaging.onMessage(payload => {
+      console.log('[FCM] Foreground message:', payload);
+      const { title, body } = payload.notification || {};
+      toast((title || 'QR Collections') + ': ' + (body || ''));
+      // Also show native notification
+      if(Notification.permission === 'granted'){
+        new Notification(title || 'QR Collections', {
+          body: body || '',
+          icon: '/qr-collections/qr-icon-192.png',
+          tag: 'qr-fg'
+        });
+      }
+    });
+
+    // Listen for token refresh
+    _fbMessaging.onTokenRefresh(async () => {
+      _fcmToken = await _fbMessaging.getToken({ vapidKey: VAPID_KEY });
+      if(_fcmToken) await registerFCMToken(_fcmToken);
+    });
+
+  } catch(err){
+    console.error('Firebase init error:', err);
+  }
+}
+
+async function registerFCMToken(token){
+  try {
+    const device = navigator.userAgent.includes('iPhone') ? 'iPhone' :
+                   navigator.userAgent.includes('Android') ? 'Android' : 'Desktop';
+    await fetch(FCM_REGISTER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, device })
+    });
+    localStorage.setItem('qr_fcm_token', token);
+  } catch(err){
+    console.error('Token registration error:', err);
+  }
+}
+
+async function sendPushNotification(title, body){
+  try {
+    // Send via Cloud Function so ALL devices get notified
+    await fetch(FCM_NOTIFY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title,
+        body,
+        icon: 'https://dsmpump-star.github.io/qr-collections/qr-icon-192.png'
+      })
+    });
+  } catch(err){
+    console.error('Push notification error:', err);
+  }
+}
 // ── PWA ──────────────────────────────────────────────────────────────────────
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('qr-sw.js')
+    navigator.serviceWorker.register('firebase-messaging-sw.js')
       .then(r=>console.log('QR SW registered'))
       .catch(e=>console.log('QR SW error:',e));
   });
