@@ -1286,20 +1286,40 @@ let _fcmToken = null;
 async function enableNotifications(){
   const btn=document.getElementById('notif-btn');
   const txt=document.getElementById('notif-btn-text');
-  if(txt) txt.textContent='Setting up...';
+  if(txt) txt.textContent='⏳ Setting up...';
   try{
+    // Step 1: Check if notifications supported
+    if(typeof Notification==='undefined'){
+      if(txt) txt.textContent='❌ Notifications not supported on this browser';
+      return;
+    }
+
+    // Step 2: Request permission
+    const perm = await Notification.requestPermission();
+    if(perm !== 'granted'){
+      if(txt) txt.textContent='❌ Permission denied — check browser settings';
+      return;
+    }
+
+    // Step 3: Check service worker
+    if(!('serviceWorker' in navigator)){
+      if(txt) txt.textContent='❌ Service Worker not supported';
+      return;
+    }
+
+    // Step 4: Init Firebase + get token
+    if(txt) txt.textContent='⏳ Getting device token...';
     await initFirebase();
-    if(Notification.permission==='granted'){
+
+    if(_fcmToken){
       if(btn) btn.style.background='#10B981';
       if(txt) txt.textContent='✅ Notifications Enabled on this Device';
-    } else if(Notification.permission==='denied'){
-      if(txt) txt.textContent='❌ Blocked — enable in iPhone Settings > Safari';
     } else {
-      if(txt) txt.textContent='Tap to Enable Notifications on this Device';
+      if(txt) txt.textContent='❌ Could not get device token — try again';
     }
   }catch(e){
-    if(txt) txt.textContent='Tap to Enable Notifications on this Device';
-    toast('Error: '+e.message,'err');
+    console.error('enableNotifications error:', e);
+    if(txt) txt.textContent='❌ Error: '+e.message;
   }
 }
 
@@ -1331,28 +1351,42 @@ async function initFirebase(){
     }
     _fbMessaging = firebase.messaging();
 
-    // Request permission
-    const permission = await Notification.requestPermission();
-    if(permission !== 'granted'){
-      console.log('Notification permission denied');
+    // Request permission if not already granted
+    if(Notification.permission !== 'granted'){
+      const permission = await Notification.requestPermission();
+      if(permission !== 'granted'){
+        console.log('Notification permission denied');
+        return;
+      }
+    }
+
+    // Get SW registration
+    const swReg = await navigator.serviceWorker.getRegistration();
+    if(!swReg){
+      console.error('No service worker registered');
+      toast('SW not found — try reinstalling app','err');
       return;
     }
 
     // Get FCM token
-    _fcmToken = await _fbMessaging.getToken({ vapidKey: VAPID_KEY });
+    _fcmToken = await _fbMessaging.getToken({ 
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: swReg
+    });
+
     if(_fcmToken){
-      console.log('FCM token obtained');
-      // Register token with our Cloud Function
+      console.log('FCM token obtained:', _fcmToken.slice(0,20)+'...');
       await registerFCMToken(_fcmToken);
       toast('Notifications enabled ✅');
+    } else {
+      console.error('No FCM token returned');
+      toast('No token returned — check Firebase setup','err');
     }
 
-    // Handle foreground messages (app open)
+    // Handle foreground messages
     _fbMessaging.onMessage(payload => {
-      console.log('[FCM] Foreground message:', payload);
       const { title, body } = payload.notification || {};
       toast((title || 'QR Collections') + ': ' + (body || ''));
-      // Also show native notification
       if(Notification.permission === 'granted'){
         new Notification(title || 'QR Collections', {
           body: body || '',
@@ -1362,7 +1396,7 @@ async function initFirebase(){
       }
     });
 
-    // Listen for token refresh
+    // Token refresh
     _fbMessaging.onTokenRefresh(async () => {
       _fcmToken = await _fbMessaging.getToken({ vapidKey: VAPID_KEY });
       if(_fcmToken) await registerFCMToken(_fcmToken);
@@ -1370,6 +1404,8 @@ async function initFirebase(){
 
   } catch(err){
     console.error('Firebase init error:', err);
+    toast('Firebase error: '+err.message,'err');
+    throw err;
   }
 }
 
