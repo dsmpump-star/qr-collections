@@ -273,15 +273,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <button onclick="switchTab('dsm')" style="padding:14px;background:linear-gradient(135deg,#5B2EE8,#4C2D99);color:#fff;border:none;border-radius:11px;font-weight:700;font-size:14px;cursor:pointer;">📥 New Entry</button>
     <button onclick="switchTab('recv')" style="padding:14px;background:linear-gradient(135deg,#F97316,#C2540A);color:#fff;border:none;border-radius:11px;font-weight:700;font-size:14px;cursor:pointer;">💰 Received</button>
   </div>
-  <!-- Notification enable button — shown until permission granted -->
-  <div id="notif-banner" style="display:none;background:#1A2332;border-radius:11px;padding:13px 15px;margin-bottom:13px;display:flex;align-items:center;gap:12px;">
-    <span style="font-size:22px;">🔔</span>
-    <div style="flex:1;">
-      <div style="color:#fff;font-size:13px;font-weight:700;">Enable Notifications</div>
-      <div style="color:rgba(255,255,255,.6);font-size:11px;">Get notified on all devices when entry saved</div>
-    </div>
-    <button onclick="enableNotifications()" style="background:#5B2EE8;color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">Enable</button>
-  </div>
+  <!-- Notification Button — always visible, tap to enable -->
+  <button onclick="enableNotifications()" id="notif-btn" style="width:100%;background:#1A2332;color:#fff;border:none;border-radius:11px;padding:13px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:13px;">
+    <span>🔔</span><span id="notif-btn-text">Tap to Enable Notifications on this Device</span>
+  </button>
 </div>
 
 <div class="page active" id="page-dsm">
@@ -1289,21 +1284,41 @@ let _fbMessaging = null;
 let _fcmToken = null;
 
 async function enableNotifications(){
+  const btn=document.getElementById('notif-btn');
+  const txt=document.getElementById('notif-btn-text');
+  if(txt) txt.textContent='Setting up...';
   try{
     await initFirebase();
-    document.getElementById('notif-banner').style.display='none';
+    if(Notification.permission==='granted'){
+      if(btn) btn.style.background='#10B981';
+      if(txt) txt.textContent='✅ Notifications Enabled on this Device';
+    } else if(Notification.permission==='denied'){
+      if(txt) txt.textContent='❌ Blocked — enable in iPhone Settings > Safari';
+    } else {
+      if(txt) txt.textContent='Tap to Enable Notifications on this Device';
+    }
   }catch(e){
-    toast('Notification setup failed: '+e.message,'err');
+    if(txt) txt.textContent='Tap to Enable Notifications on this Device';
+    toast('Error: '+e.message,'err');
   }
 }
 
 function checkNotifBanner(){
-  const banner=document.getElementById('notif-banner');
-  if(!banner) return;
+  const btn=document.getElementById('notif-btn');
+  const txt=document.getElementById('notif-btn-text');
+  if(!btn||!txt) return;
+  if(typeof Notification==='undefined'){
+    // iPhone Safari without permission support
+    txt.textContent='🔔 Tap to Enable Notifications';
+    return;
+  }
   if(Notification.permission==='granted'){
-    banner.style.display='none';
+    btn.style.background='#10B981';
+    txt.textContent='✅ Notifications Enabled on this Device';
+  } else if(Notification.permission==='denied'){
+    txt.textContent='❌ Blocked — enable in iPhone Settings > Safari';
   } else {
-    banner.style.display='flex';
+    txt.textContent='🔔 Tap to Enable Notifications on this Device';
   }
 }
 
