@@ -206,7 +206,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .export-row .btn{flex:1;padding:12px;font-size:13px;}
 </style>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
 </head>
@@ -898,12 +897,13 @@ function exportPDF(){
   th{background:#F5F7FA;color:#8A97AA;padding:9px 10px;text-align:left;font-size:10px;text-transform:uppercase;border-bottom:1px solid #E4E8EF;}
   td{padding:9px 10px;border-bottom:1px solid #E4E8EF;font-size:12px;}
   tfoot td{background:#F5F7FA!important;font-weight:700;}
-  .btn{background:#1A2332;color:#fff;border:none;padding:10px 22px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;margin-top:20px;}
-  @media print{.btn{display:none;}}</style>
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
+  .btn{background:#1A2332;color:#fff;border:none;padding:10px 22px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;margin:8px 8px 8px 0;}
+  .btn-back{background:#6B7280!important;}.btn-wrap{margin-bottom:16px;}@media print{.btn-wrap{display:none;}}</style>
 </head><body>
+  <div class="btn-wrap">
+    <button class="btn btn-back" onclick="window.close()">← Back to App</button>
+    <button class="btn" onclick="window.print()">🖨 Print / Save PDF</button>
+  </div>
   <h1>📱⛽ QR Collections Report</h1>
   <div class="meta">Generated: ${new Date().toLocaleString('en-IN')}</div>
   <div class="summary">
@@ -914,7 +914,6 @@ function exportPDF(){
   <table><thead><tr><th>Date</th><th>Shift</th><th>⛽ Ufill</th><th>Ufill Status</th><th>📱 PhonePe</th><th>PP Status</th></tr></thead>
   <tbody>${rows}</tbody>
   <tfoot><tr><td colspan="2">TOTAL (${entries.length})</td><td style="color:#F97316;font-family:monospace;">₹${totalUF.toLocaleString('en-IN',{minimumFractionDigits:2})}</td><td></td><td style="color:#5B2EE8;font-family:monospace;">₹${totalPP.toLocaleString('en-IN',{minimumFractionDigits:2})}</td><td></td></tr></tfoot></table>
-  <button class="btn" onclick="window.print()">🖨 Print / Save PDF</button>
   </body></html>`);_pw.document.close();}toast('PDF opened!');
 }
 
@@ -1092,12 +1091,13 @@ function exportLedgerPDF(){
   .sval{font-size:15px;font-weight:700;font-family:monospace;}.slbl{font-size:10px;color:#888;text-transform:uppercase;margin-top:2px;}
   table{width:100%;border-collapse:collapse;}th{background:${pColor};color:#fff;padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;}
   td{padding:8px 10px;border-bottom:1px solid #eee;font-size:12px;}tr:nth-child(even) td{background:#F8FBFD;}
-  .btn{background:${pColor};color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:700;margin-top:18px;}
-  @media print{.btn{display:none;}}</style>
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
+  .btn{background:${pColor};color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:700;margin:8px 8px 8px 0;}
+  .btn-back{background:#6B7280!important;}.btn-wrap{margin-bottom:14px;}@media print{.btn-wrap{display:none;}}</style>
 </head><body>
+  <div class="btn-wrap">
+    <button class="btn btn-back" onclick="window.close()">← Back to App</button>
+    <button class="btn" onclick="window.print()">🖨 Print / Save PDF</button>
+  </div>
   <h1>${platform==='pp'?'📱':'⛽'} ${pName.toUpperCase()} — TRANSACTION LEDGER</h1>
   <div class="meta">Period: ${fmtDate(from)} to ${fmtDate(to)} · Generated: ${new Date().toLocaleString('en-IN')}</div>
   <div class="summary">
@@ -1108,7 +1108,7 @@ function exportLedgerPDF(){
   </div>
   <table><thead><tr><th>Date</th><th>Particulars</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
   <tbody>${rows}</tbody></table>
-  <button class="btn" onclick="window.print()">🖨 Print / Save PDF</button></body></html>`);_pw.document.close();}toast('PDF opened!');
+  </body></html>`);_pw.document.close();}toast('PDF opened!');
 }
 
 // ── INIT ───────────────────────────────────────────────────────────────────
@@ -1193,9 +1193,6 @@ function generateQRMonthSummary(){
   th{background:#1A2332;color:#fff;padding:7px;font-size:10px;}td{padding:7px;border-bottom:1px solid #ddd;}
   .btn{background:#6B7280;color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;margin-right:8px;font-weight:700;}
   @media print{.btn{display:none;}}</style>
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
 </head><body>
   <div style="margin-bottom:14px;"><button class="btn" onclick="window.close()">← Back</button><button class="btn" style="background:#1A2332;" onclick="window.print()">🖨 Print</button></div>
   <h2>📱 QR Collections — Month Summary</h2>
