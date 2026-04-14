@@ -1396,11 +1396,7 @@ async function initFirebase(){
       }
     });
 
-    // Token refresh
-    _fbMessaging.onTokenRefresh(async () => {
-      _fcmToken = await _fbMessaging.getToken({ vapidKey: VAPID_KEY });
-      if(_fcmToken) await registerFCMToken(_fcmToken);
-    });
+    // Token refresh handled automatically by SDK
 
   } catch(err){
     console.error('Firebase init error:', err);
