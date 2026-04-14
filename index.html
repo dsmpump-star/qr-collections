@@ -269,9 +269,18 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div id="qd-today-list"><div class="empty" style="padding:20px;"><div class="ico">📋</div><p>No entries today</p></div></div>
   </div>
   <!-- Quick Actions -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:13px;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
     <button onclick="switchTab('dsm')" style="padding:14px;background:linear-gradient(135deg,#5B2EE8,#4C2D99);color:#fff;border:none;border-radius:11px;font-weight:700;font-size:14px;cursor:pointer;">📥 New Entry</button>
     <button onclick="switchTab('recv')" style="padding:14px;background:linear-gradient(135deg,#F97316,#C2540A);color:#fff;border:none;border-radius:11px;font-weight:700;font-size:14px;cursor:pointer;">💰 Received</button>
+  </div>
+  <!-- Notification enable button — shown until permission granted -->
+  <div id="notif-banner" style="display:none;background:#1A2332;border-radius:11px;padding:13px 15px;margin-bottom:13px;display:flex;align-items:center;gap:12px;">
+    <span style="font-size:22px;">🔔</span>
+    <div style="flex:1;">
+      <div style="color:#fff;font-size:13px;font-weight:700;">Enable Notifications</div>
+      <div style="color:rgba(255,255,255,.6);font-size:11px;">Get notified on all devices when entry saved</div>
+    </div>
+    <button onclick="enableNotifications()" style="background:#5B2EE8;color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">Enable</button>
   </div>
 </div>
 
@@ -504,13 +513,13 @@ async function loadFromSheet(){
     db.entries=(remote.entries||[]).map(e=>({...e,date:normalizeDate(e.date),pp:Number(e.pp||0),uf:Number(e.uf||0)}));
     db.received=(remote.received||[]).map(r=>({...r,date:normalizeDate(r.date),pp:Number(r.pp||0),uf:Number(r.uf||0)}));
     setSyncStatus('ok');
-    refreshDSM();refreshRecv();refreshQRDash();switchTab('dash');initFirebase();
+    refreshDSM();refreshRecv();refreshQRDash();switchTab('dash');checkNotifBanner();initFirebase().catch(()=>{});
   }catch(e){
     setSyncStatus('err');
     toast('Offline — using local data','err');
     const local=localStorage.getItem('qr_db');
     if(local)try{Object.assign(db,JSON.parse(local));}catch{}
-    refreshDSM();refreshRecv();refreshQRDash();switchTab('dash');initFirebase();
+    refreshDSM();refreshRecv();refreshQRDash();switchTab('dash');checkNotifBanner();initFirebase().catch(()=>{});
   }
 }
 function saveLocal(){localStorage.setItem('qr_db',JSON.stringify(db));}
@@ -520,7 +529,7 @@ function switchTab(tab){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['dash','dsm','recv','report','ledger'][i]===tab));
   document.getElementById('page-'+tab).classList.add('active');
-  if(tab==='dash')refreshQRDash();
+  if(tab==='dash'){refreshQRDash();checkNotifBanner();}
   if(tab==='recv')refreshRecv();
   if(tab==='report')refreshReport();
   if(tab==='ledger'){
@@ -1278,6 +1287,25 @@ const FCM_NOTIFY_URL   = "https://qr-notify.dsmpump-18c.workers.dev/notify";
 let _fbApp = null;
 let _fbMessaging = null;
 let _fcmToken = null;
+
+async function enableNotifications(){
+  try{
+    await initFirebase();
+    document.getElementById('notif-banner').style.display='none';
+  }catch(e){
+    toast('Notification setup failed: '+e.message,'err');
+  }
+}
+
+function checkNotifBanner(){
+  const banner=document.getElementById('notif-banner');
+  if(!banner) return;
+  if(Notification.permission==='granted'){
+    banner.style.display='none';
+  } else {
+    banner.style.display='flex';
+  }
+}
 
 async function initFirebase(){
   try {
