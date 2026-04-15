@@ -484,7 +484,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <button class="qan-pbtn" onclick="setQRAnPeriod('last',this)">Last Month</button>
     <button class="qan-pbtn" onclick="setQRAnPeriod('fy',this)">Full FY</button>
   </div>
-
   <div style="text-align:right;margin-bottom:10px;">
     <button onclick="printQRAnalytics()" style="background:#1A2332;color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;">🖨️ Print / Save PDF</button>
   </div>
@@ -1530,66 +1529,76 @@ async function sendPushNotification(title, body){
 // ── PWA ──────────────────────────────────────────────────────────────────────
 
 
-
 function printQRAnalytics(){
-  refreshQRAnalytics();
-  const period=document.querySelector('#page-analytics .qan-pbtn.ap');
-  const periodLabel=period?period.textContent.trim():'Selected Period';
-  const{from,to}=qrAnDates();
-  const pp=document.getElementById('qan-pp').textContent;
-  const uf=document.getElementById('qan-uf').textContent;
-  const avg=document.getElementById('qan-avg').textContent;
-  const entries=document.getElementById('qan-entries').textContent;
-  const momHTML=document.getElementById('qan-mom').innerHTML;
-  const weeklyHTML=document.getElementById('qan-weekly').innerHTML;
-  const _pw=window.open('','_blank');
-  if(_pw){_pw.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>QR Analytics</title>
-  <style>body{font-family:Arial,sans-serif;font-size:12px;padding:24px;color:#1A2332;}
-  h1{font-size:18px;margin-bottom:4px;}.meta{color:#888;font-size:11px;margin-bottom:14px;}
-  .gr{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
-  .tile{border-radius:8px;padding:10px;text-align:center;}
-  .tv{font-size:14px;font-weight:800;font-family:monospace;}.tl{font-size:9px;color:#888;margin-top:2px;}
-  .sec{margin-bottom:16px;page-break-inside:avoid;}
-  .st{font-size:12px;font-weight:700;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #E2E8F0;}
-  .an-mom-wrap{display:flex;align-items:flex-end;gap:3px;height:90px;}
-  .an-mom-col{display:flex;flex-direction:column;align-items:center;min-width:34px;flex-shrink:0;}
-  .an-mom-bars{display:flex;gap:2px;align-items:flex-end;width:100%;}
-  .an-bar-d{background:#5B2EE8;border-radius:2px 2px 0 0;width:50%;}
-  .an-bar-c{background:#F97316;border-radius:2px 2px 0 0;width:50%;}
-  .an-mom-lbl{font-size:7px;color:#888;margin-top:3px;text-align:center;}
-  .qan-wk-row{display:flex;align-items:center;padding:5px 0;border-bottom:1px solid #F1F5F9;gap:6px;}
-  .qan-wk-lbl{font-size:9px;color:#888;width:55px;flex-shrink:0;}
-  .qan-wk-bar-wrap{flex:1;background:#F1F5F9;border-radius:3px;height:6px;overflow:hidden;}
-  .qan-wk-bar-pp{height:6px;border-radius:3px 0 0 3px;background:#5B2EE8;float:left;}
-  .qan-wk-bar-uf{height:6px;border-radius:0 3px 3px 0;background:#F97316;float:left;}
-  .qan-wk-amt{font-size:9px;font-weight:700;width:68px;text-align:right;font-family:monospace;}
-  .btn{background:#5B2EE8;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:700;margin:0 8px 14px 0;}
-  .btn-back{background:#6B7280!important;}
-  .lg{display:flex;gap:10px;margin-top:5px;}
-  .li{display:flex;align-items:center;gap:3px;font-size:9px;color:#888;}
-  .ld{width:7px;height:7px;border-radius:2px;}
-  .ft{margin-top:20px;font-size:9px;color:#9CA3AF;text-align:center;padding-top:8px;border-top:1px solid #eee;}
-  @media print{.no-print{display:none!important;}}</style>
-  </head><body>
-  <div class="no-print" style="margin-bottom:14px;">
-    <button class="btn btn-back" onclick="window.close()">← Back to App</button>
-    <button class="btn" onclick="window.print()">🖨 Print / Save PDF</button>
+  const period = document.querySelector('#page-analytics .qan-pbtn.ap');
+  const periodLabel = period ? period.textContent : '';
+  const {from,to} = qrAnDates();
+  const pp = document.getElementById('qan-pp').textContent;
+  const uf = document.getElementById('qan-uf').textContent;
+  const avg = document.getElementById('qan-avg').textContent;
+  const entries = document.getElementById('qan-entries').textContent;
+  const momHTML = document.getElementById('qan-mom').innerHTML;
+  const weeklyHTML = document.getElementById('qan-weekly').innerHTML;
+  const win = window.open('','_blank','width=800,height=900');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>QR Collections Analytics</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',sans-serif;background:#fff;color:#1A2332;padding:24px;}
+    h1{font-size:18px;font-weight:800;margin-bottom:4px;}
+    .sub{font-size:12px;color:#6B7280;margin-bottom:20px;}
+    .tiles{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:20px;}
+    .tile{border-radius:10px;padding:12px;text-align:center;}
+    .t-pp{background:#EDE9FE;}.t-uf{background:#FFF7ED;}.t-avg{background:#F0F9FF;}.t-cnt{background:#F0FDF4;}
+    .tile-val{font-size:15px;font-weight:800;font-family:monospace;}
+    .tile-lbl{font-size:10px;color:#6B7280;margin-top:3px;}
+    .section{margin-bottom:20px;}
+    .section-title{font-size:13px;font-weight:700;color:#1A2332;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #E2E8F0;}
+    .an-mom-wrap{display:flex;align-items:flex-end;gap:3px;height:110px;overflow-x:auto;}
+    .an-mom-col{display:flex;flex-direction:column;align-items:center;min-width:38px;flex-shrink:0;}
+    .an-mom-bars{display:flex;gap:2px;align-items:flex-end;width:100%;}
+    .an-bar-d{background:#5B2EE8;border-radius:3px 3px 0 0;width:50%;}
+    .an-bar-c{background:#F97316;border-radius:3px 3px 0 0;width:50%;}
+    .an-mom-lbl{font-size:8px;color:#6B7280;margin-top:4px;text-align:center;}
+    .qan-wk-row{display:flex;align-items:center;padding:7px 0;border-bottom:1px solid #F1F5F9;gap:10px;}
+    .qan-wk-lbl{font-size:11px;color:#6B7280;width:70px;flex-shrink:0;}
+    .qan-wk-bar-wrap{flex:1;background:#F1F5F9;border-radius:4px;height:8px;overflow:hidden;}
+    .qan-wk-bar-pp{height:8px;border-radius:4px 0 0 4px;background:#5B2EE8;float:left;}
+    .qan-wk-bar-uf{height:8px;border-radius:0 4px 4px 0;background:#F97316;float:left;}
+    .qan-wk-amt{font-size:11px;font-weight:700;color:#1A2332;width:80px;text-align:right;font-family:monospace;}
+    .legend{display:flex;gap:14px;margin-top:8px;}
+    .leg{display:flex;align-items:center;gap:5px;font-size:10px;color:#6B7280;}
+    .leg-dot{width:9px;height:9px;border-radius:2px;}
+    .footer{margin-top:24px;font-size:10px;color:#9CA3AF;text-align:center;border-top:1px solid #F1F5F9;padding-top:12px;}
+    @media print{.no-print{display:none!important;}}
+  </style></head><body>
+  <div class="no-print" style="margin-bottom:16px;">
+    <button onclick="window.print()" style="background:#1A2332;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;margin-right:8px;">🖨️ Print / Save PDF</button>
+    <button onclick="window.close()" style="background:#F1F5F9;color:#1A2332;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;">✕ Close</button>
   </div>
-  <h1>📱 QR Collections — Analytics</h1>
-  <div class="meta">Period: ${periodLabel} | ${from} to ${to} | Generated: ${new Date().toLocaleString('en-IN')}</div>
-  <div class="gr">
-    <div class="tile" style="background:#EDE9FE"><div class="tv" style="color:#5B2EE8">${pp}</div><div class="tl">PhonePe</div></div>
-    <div class="tile" style="background:#FFF7ED"><div class="tv" style="color:#F97316">${uf}</div><div class="tl">Ufill</div></div>
-    <div class="tile" style="background:#F0F9FF"><div class="tv" style="color:#0369A1">${avg}</div><div class="tl">Avg/Day</div></div>
-    <div class="tile" style="background:#F0FDF4"><div class="tv" style="color:#15803D">${entries}</div><div class="tl">Entries</div></div>
+  <h1>📱 QR Collections — Analytics Report</h1>
+  <div class="sub">Period: ${periodLabel} &nbsp;|&nbsp; ${from} to ${to} &nbsp;|&nbsp; Generated: ${new Date().toLocaleString('en-IN')}</div>
+  <div class="tiles">
+    <div class="tile t-pp"><div class="tile-val" style="color:#5B2EE8;">${pp}</div><div class="tile-lbl">PhonePe</div></div>
+    <div class="tile t-uf"><div class="tile-val" style="color:#F97316;">${uf}</div><div class="tile-lbl">Ufill</div></div>
+    <div class="tile t-avg"><div class="tile-val" style="color:#0369A1;">${avg}</div><div class="tile-lbl">Avg/Day</div></div>
+    <div class="tile t-cnt"><div class="tile-val" style="color:#15803D;">${entries}</div><div class="tile-lbl">Entries</div></div>
   </div>
-  <div class="sec"><div class="st">Month-on-Month Comparison</div>
+  <div class="section">
+    <div class="section-title">📅 Month-on-Month Comparison</div>
     <div class="an-mom-wrap">${momHTML}</div>
-    <div class="lg"><div class="li"><div class="ld" style="background:#5B2EE8"></div>PhonePe</div><div class="li"><div class="ld" style="background:#F97316"></div>Ufill</div></div>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:#5B2EE8;"></div>PhonePe</div>
+      <div class="leg"><div class="leg-dot" style="background:#F97316;"></div>Ufill</div>
+    </div>
   </div>
-  <div class="sec"><div class="st">Weekly Trend</div>${weeklyHTML}</div>
-  <div class="ft">QR Collections Manager | DSM Pump Star</div>
-  </body></html>`);_pw.document.close();}toast('PDF opened!');
+  <div class="section">
+    <div class="section-title">📆 Weekly Trend</div>
+    ${weeklyHTML}
+  </div>
+  <div class="footer">QR Collections Manager &nbsp;|&nbsp; DSM Pump Star</div>
+  </body></html>`);
+  win.document.close();
 }
 
 // ── QR ANALYTICS ─────────────────────────────────────────────────────────────
@@ -2141,66 +2150,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <!-- ═══ ANALYTICS ═══ -->
-<div class="page" id="page-analytics">
-<style>
-.qan-pbtn{flex:1;padding:8px 3px;border-radius:20px;font-size:10px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:var(--card);color:var(--muted);}
-.qan-pbtn.ap{background:#1A2332;color:#fff;border-color:#1A2332;}
-.qan-card{background:var(--card);border-radius:13px;border:1px solid var(--border);padding:14px;margin-bottom:13px;}
-.qan-title{font-size:12px;font-weight:700;color:#1A2332;margin-bottom:11px;}
-.an-mom-wrap{display:flex;align-items:flex-end;gap:3px;height:110px;overflow-x:auto;padding-bottom:2px;}
-.an-mom-col{display:flex;flex-direction:column;align-items:center;min-width:38px;flex-shrink:0;}
-.an-mom-bars{display:flex;gap:2px;align-items:flex-end;width:100%;}
-.an-bar-d{background:#5B2EE8;border-radius:3px 3px 0 0;width:50%;transition:height .4s;}
-.an-bar-c{background:#F97316;border-radius:3px 3px 0 0;width:50%;transition:height .4s;}
-.an-mom-lbl{font-size:8px;color:var(--muted);margin-top:4px;text-align:center;}
-.qan-legend{display:flex;gap:14px;justify-content:center;margin-top:8px;}
-.qan-leg{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);}
-.qan-dot{width:9px;height:9px;border-radius:2px;}
-.qan-wk-row{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);gap:10px;}
-.qan-wk-row:last-child{border-bottom:none;}
-.qan-wk-lbl{font-size:11px;color:var(--muted);width:70px;flex-shrink:0;}
-.qan-wk-bar-wrap{flex:1;background:#F1F5F9;border-radius:4px;height:8px;overflow:hidden;}
-.qan-wk-bar-pp{height:8px;border-radius:4px 0 0 4px;background:#5B2EE8;float:left;}
-.qan-wk-bar-uf{height:8px;border-radius:0 4px 4px 0;background:#F97316;float:left;}
-.qan-wk-amt{font-size:11px;font-weight:700;color:#1A2332;width:80px;text-align:right;font-family:monospace;}
-</style>
-  <div style="display:flex;gap:5px;margin-bottom:13px;">
-    <button class="qan-pbtn ap" onclick="setQRAnPeriod('week',this)">This Week</button>
-    <button class="qan-pbtn" onclick="setQRAnPeriod('month',this)">This Month</button>
-    <button class="qan-pbtn" onclick="setQRAnPeriod('last',this)">Last Month</button>
-    <button class="qan-pbtn" onclick="setQRAnPeriod('fy',this)">Full FY</button>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:13px;">
-    <div style="background:linear-gradient(135deg,#5B2EE8,#4C2D99);border-radius:13px;padding:13px;color:#fff;">
-      <div id="qan-pp" style="font-size:15px;font-weight:800;font-family:monospace;">₹0</div>
-      <div style="font-size:10px;opacity:.7;margin-top:3px;">PhonePe Total</div>
-    </div>
-    <div style="background:linear-gradient(135deg,#F97316,#C2540A);border-radius:13px;padding:13px;color:#fff;">
-      <div id="qan-uf" style="font-size:15px;font-weight:800;font-family:monospace;">₹0</div>
-      <div style="font-size:10px;opacity:.7;margin-top:3px;">Ufill Total</div>
-    </div>
-    <div style="background:var(--card);border-radius:13px;padding:13px;border:1px solid var(--border);">
-      <div id="qan-avg" style="font-size:15px;font-weight:800;font-family:monospace;color:#1A2332;">₹0</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:3px;">Avg/Day Collection</div>
-    </div>
-    <div style="background:var(--card);border-radius:13px;padding:13px;border:1px solid var(--border);">
-      <div id="qan-entries" style="font-size:15px;font-weight:800;font-family:monospace;color:#1A2332;">0</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:3px;">Total Entries</div>
-    </div>
-  </div>
-  <div class="qan-card">
-    <div class="qan-title">📅 Month-on-Month Comparison</div>
-    <div class="an-mom-wrap" id="qan-mom"></div>
-    <div class="qan-legend">
-      <div class="qan-leg"><div class="qan-dot" style="background:#5B2EE8;"></div>PhonePe</div>
-      <div class="qan-leg"><div class="qan-dot" style="background:#F97316;"></div>Ufill</div>
-    </div>
-  </div>
-  <div class="qan-card">
-    <div class="qan-title">📆 Weekly Trend</div>
-    <div id="qan-weekly"></div>
-  </div>
-</div>
 
 
 <div class="toast" id="toast"></div>
@@ -2290,7 +2239,6 @@ function switchTab(tab){
     document.getElementById('led-from').value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
     document.getElementById('led-to').value=today;
   }
-  if(tab==='analytics'){refreshQRAnalytics();}
 }
 
 // ── MATCH ENGINE ───────────────────────────────────────────────────────────
@@ -3024,15 +2972,7 @@ function sendQRNotif(body){
 }
 
 // ── FIREBASE PUSH NOTIFICATIONS ───────────────────────────────────────────────
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyA_nJVzzbNsTLwNGwxZaf8RpaniXDMETFM",
-  authDomain: "dsm-qr-notifications.firebaseapp.com",
-  projectId: "dsm-qr-notifications",
-  storageBucket: "dsm-qr-notifications.firebasestorage.app",
-  messagingSenderId: "522523299808",
-  appId: "1:522523299808:web:9f86a2eafa2fe054446585"
-};
-const VAPID_KEY = "BI8fg36cBZWQzgMHQeJITrT5aVafyWJPAWXHRZcL0zCTzW2xPWgdtyRLRUMvMka5m5_L2RRJa5K_nu7p6xhg9wY";
+
 
 // Cloud Function URLs (update after deploying functions)
 const FCM_REGISTER_URL = "https://qr-notify.dsmpump-18c.workers.dev/register";
@@ -3042,281 +2982,13 @@ let _fbApp = null;
 let _fbMessaging = null;
 let _fcmToken = null;
 
-function setNotifToggle(enabled){
-  const toggle=document.getElementById('notif-toggle');
-  const knob=document.getElementById('notif-knob');
-  const txt=document.getElementById('notif-btn-text');
-  const icon=document.getElementById('notif-icon');
-  const btn=document.getElementById('notif-btn');
-  if(enabled){
-    if(toggle) toggle.style.background='#10B981';
-    if(knob) knob.style.left='22px';
-    if(txt) txt.textContent='Notifications Enabled';
-    if(icon) icon.textContent='🔔';
-    if(btn) btn.style.background='#0B1E3D';
-  } else {
-    if(toggle) toggle.style.background='#374151';
-    if(knob) knob.style.left='2px';
-    if(txt) txt.textContent='Notifications Disabled — tap to enable';
-    if(icon) icon.textContent='🔕';
-    if(btn) btn.style.background='#1A2332';
-  }
-  localStorage.setItem('qr_notif_enabled', enabled?'1':'0');
-}
 
-async function toggleNotifications(){
-  const isEnabled=localStorage.getItem('qr_notif_enabled')==='1'&&_fcmToken;
-  const txt=document.getElementById('notif-btn-text');
-
-  if(isEnabled){
-    // DISABLE — unregister token from worker
-    try{
-      if(_fcmToken){
-        await fetch(FCM_REGISTER_URL.replace('/register','/unregister'),{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({token:_fcmToken})
-        });
-      }
-    }catch(e){}
-    _fcmToken=null;
-    localStorage.removeItem('qr_fcm_token');
-    setNotifToggle(false);
-    toast('Notifications disabled 🔕');
-  } else {
-    // ENABLE
-    if(txt) txt.textContent='⏳ Enabling...';
-    try{
-      if(typeof Notification==='undefined'){
-        if(txt) txt.textContent='❌ Not supported on this browser';
-        return;
-      }
-      const perm=await Notification.requestPermission();
-      if(perm!=='granted'){
-        if(txt) txt.textContent='❌ Permission denied — check settings';
-        return;
-      }
-      await initFirebase();
-      if(_fcmToken){
-        setNotifToggle(true);
-        toast('Notifications enabled 🔔');
-      } else {
-        if(txt) txt.textContent='❌ Could not get token — try again';
-      }
-    }catch(e){
-      if(txt) txt.textContent='❌ Error: '+e.message;
-    }
-  }
-}
-
-function checkNotifBanner(){
-  const enabled=localStorage.getItem('qr_notif_enabled')==='1';
-  const denied=typeof Notification!=='undefined'&&Notification.permission==='denied';
-  if(denied){
-    const txt=document.getElementById('notif-btn-text');
-    if(txt) txt.textContent='❌ Blocked — enable in iPhone Settings > Notifications';
-    setNotifToggle(false);
-  } else {
-    setNotifToggle(enabled&&!!_fcmToken);
-  }
-}
-
-async function initFirebase(){
-  try {
-    if(!firebase.apps.length){
-      _fbApp = firebase.initializeApp(FIREBASE_CONFIG);
-    } else {
-      _fbApp = firebase.app();
-    }
-    _fbMessaging = firebase.messaging();
-
-    // Request permission if not already granted
-    if(Notification.permission !== 'granted'){
-      const permission = await Notification.requestPermission();
-      if(permission !== 'granted'){
-        console.log('Notification permission denied');
-        return;
-      }
-    }
-
-    // Get SW registration
-    const swReg = await navigator.serviceWorker.getRegistration();
-    if(!swReg){
-      console.error('No service worker registered');
-      toast('SW not found — try reinstalling app','err');
-      return;
-    }
-
-    // Get FCM token
-    _fcmToken = await _fbMessaging.getToken({ 
-      vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: swReg
-    });
-
-    if(_fcmToken){
-      console.log('FCM token obtained:', _fcmToken.slice(0,20)+'...');
-      await registerFCMToken(_fcmToken);
-      setNotifToggle(true);
-    } else {
-      console.error('No FCM token returned');
-      toast('No token returned — check Firebase setup','err');
-    }
-
-    // Handle foreground messages — show toast only (SW handles native notification)
-    _fbMessaging.onMessage(payload => {
-      const { title, body } = payload.notification || {};
-      toast((title || 'QR Collections') + ': ' + (body || ''));
-      // Do NOT show native notification here — SW already handles it
-    });
-
-    // Token refresh handled automatically by SDK
-
-  } catch(err){
-    console.error('Firebase init error:', err);
-    toast('Firebase error: '+err.message,'err');
-    throw err;
-  }
-}
-
-async function registerFCMToken(token){
-  try {
-    const device = navigator.userAgent.includes('iPhone') ? 'iPhone' :
-                   navigator.userAgent.includes('Android') ? 'Android' : 'Desktop';
-    await fetch(FCM_REGISTER_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, device })
-    });
-    localStorage.setItem('qr_fcm_token', token);
-  } catch(err){
-    console.error('Token registration error:', err);
-  }
-}
-
-async function sendPushNotification(title, body){
-  try {
-    // Send via Cloud Function so ALL devices get notified
-    await fetch(FCM_NOTIFY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title,
-        body,
-        icon: 'https://dsmpump-star.github.io/qr-collections/qr-icon-192.png'
-      })
-    });
-  } catch(err){
-    console.error('Push notification error:', err);
-  }
-}
 // ── PWA ──────────────────────────────────────────────────────────────────────
 
 // ── QR ANALYTICS ─────────────────────────────────────────────────────────────
 let _qrAnPeriod = 'week';
 
-function setQRAnPeriod(p, btn) {
-  _qrAnPeriod = p;
-  document.querySelectorAll('#page-analytics .qan-pbtn').forEach(b => b.classList.remove('ap'));
-  if(btn) btn.classList.add('ap');
-  refreshQRAnalytics();
-}
 
-function qrAnDates() {
-  const now = new Date();
-  const todayS = now.toISOString().split('T')[0];
-  let from, to = todayS;
-  if(_qrAnPeriod==='week'){const d=new Date(now);d.setDate(d.getDate()-6);from=d.toISOString().split('T')[0];}
-  else if(_qrAnPeriod==='month'){from=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;}
-  else if(_qrAnPeriod==='last'){
-    const d1=new Date(now.getFullYear(),now.getMonth()-1,1);
-    const d2=new Date(now.getFullYear(),now.getMonth(),0);
-    from=d1.toISOString().split('T')[0]; to=d2.toISOString().split('T')[0];
-  } else {
-    const d=new Date(now);
-    const yr=d.getMonth()>=3?d.getFullYear():d.getFullYear()-1;
-    from=`${yr}-04-01`; to=`${yr+1}-03-31`;
-    if(to>todayS)to=todayS;
-  }
-  return{from,to};
-}
-
-function refreshQRAnalytics(){
-  const{from,to}=qrAnDates();
-  const entries=db.entries.filter(e=>e.date>=from&&e.date<=to);
-  const recv=db.received.filter(r=>r.date>=from&&r.date<=to);
-
-  const platform=db.platform||'pp';
-  const totalPP=entries.reduce((s,e)=>s+(e.pp||0),0)+recv.reduce((s,r)=>s+(r.pp||0),0);
-  const totalUF=entries.reduce((s,e)=>s+(e.uf||0),0)+recv.reduce((s,r)=>s+(r.uf||0),0);
-  const total=totalPP+totalUF;
-  const days=new Set(entries.map(e=>e.date));
-  const avgDay=days.size>0?total/days.size:0;
-
-  document.getElementById('qan-pp').textContent=fmtAmt(totalPP);
-  document.getElementById('qan-uf').textContent=fmtAmt(totalUF);
-  document.getElementById('qan-avg').textContent=fmtAmt(avgDay);
-  document.getElementById('qan-entries').textContent=entries.length;
-
-  // Month-on-Month — 6 months
-  const now=new Date();
-  const months=[];
-  for(let i=5;i>=0;i--){
-    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
-    const mFrom=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
-    const mTo=new Date(d.getFullYear(),d.getMonth()+1,0).toISOString().split('T')[0];
-    const mPP=db.entries.filter(e=>e.date>=mFrom&&e.date<=mTo).reduce((s,e)=>s+(e.pp||0),0);
-    const mUF=db.entries.filter(e=>e.date>=mFrom&&e.date<=mTo).reduce((s,e)=>s+(e.uf||0),0);
-    months.push({label:d.toLocaleString('default',{month:'short'}),pp:mPP,uf:mUF});
-  }
-  const maxMom=Math.max(...months.map(m=>Math.max(m.pp,m.uf)),1);
-  document.getElementById('qan-mom').innerHTML=months.map(m=>`
-    <div class="an-mom-col">
-      <div class="an-mom-bars" style="height:90px;align-items:flex-end;">
-        <div class="an-bar-d" style="height:${Math.max((m.pp/maxMom)*90,2)}px;" title="${fmtAmt(m.pp)}"></div>
-        <div class="an-bar-c" style="height:${Math.max((m.uf/maxMom)*90,2)}px;" title="${fmtAmt(m.uf)}"></div>
-      </div>
-      <div class="an-mom-lbl">${m.label}</div>
-    </div>`).join('');
-
-  // Weekly trend — 8 weeks
-  const weeks=[];
-  for(let i=7;i>=0;i--){
-    const wEnd=new Date(now);wEnd.setDate(wEnd.getDate()-i*7);
-    const wStart=new Date(wEnd);wStart.setDate(wEnd.getDate()-6);
-    const wFrom=wStart.toISOString().split('T')[0];
-    const wTo=wEnd.toISOString().split('T')[0];
-    const wPP=db.entries.filter(e=>e.date>=wFrom&&e.date<=wTo).reduce((s,e)=>s+(e.pp||0),0);
-    const wUF=db.entries.filter(e=>e.date>=wFrom&&e.date<=wTo).reduce((s,e)=>s+(e.uf||0),0);
-    const wTotal=wPP+wUF;
-    weeks.push({label:`${String(wStart.getDate()).padStart(2,'0')}/${String(wStart.getMonth()+1).padStart(2,'0')}`,pp:wPP,uf:wUF,total:wTotal});
-  }
-  const maxWk=Math.max(...weeks.map(w=>w.total),1);
-  document.getElementById('qan-weekly').innerHTML=weeks.map(w=>`
-    <div class="qan-wk-row">
-      <div class="qan-wk-lbl">${w.label}</div>
-      <div class="qan-wk-bar-wrap">
-        <div class="qan-wk-bar-pp" style="width:${(w.pp/maxWk)*100}%;"></div>
-        <div class="qan-wk-bar-uf" style="width:${(w.uf/maxWk)*100}%;"></div>
-      </div>
-      <div class="qan-wk-amt">${w.total>0?fmtAmt(w.total):'—'}</div>
-    </div>`).join('');
-}
-
-
-if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('firebase-messaging-sw.js')
-      .then(r=>console.log('QR SW registered'))
-      .catch(e=>console.log('QR SW error:',e));
-  });
-}
-
-let _qrInstallPrompt=null;
-window.addEventListener('beforeinstallprompt',e=>{
-  e.preventDefault();
-  _qrInstallPrompt=e;
-  setTimeout(showQRInstallBanner,3000);
-});
 
 function showQRInstallBanner(){
   if(!_qrInstallPrompt) return;
