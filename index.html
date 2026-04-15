@@ -484,6 +484,9 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <button class="qan-pbtn" onclick="setQRAnPeriod('last',this)">Last Month</button>
     <button class="qan-pbtn" onclick="setQRAnPeriod('fy',this)">Full FY</button>
   </div>
+  <div style="text-align:right;margin-bottom:10px;">
+    <button onclick="printQRAnalytics()" style="background:#1A2332;color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;">🖨️ Print / Save PDF</button>
+  </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:13px;">
     <div style="background:linear-gradient(135deg,#5B2EE8,#4C2D99);border-radius:13px;padding:13px;color:#fff;">
       <div id="qan-pp" style="font-size:15px;font-weight:800;font-family:monospace;">₹0</div>
@@ -1524,6 +1527,79 @@ async function sendPushNotification(title, body){
   }
 }
 // ── PWA ──────────────────────────────────────────────────────────────────────
+
+
+function printQRAnalytics(){
+  const period = document.querySelector('#page-analytics .qan-pbtn.ap');
+  const periodLabel = period ? period.textContent : '';
+  const {from,to} = qrAnDates();
+  const pp = document.getElementById('qan-pp').textContent;
+  const uf = document.getElementById('qan-uf').textContent;
+  const avg = document.getElementById('qan-avg').textContent;
+  const entries = document.getElementById('qan-entries').textContent;
+  const momHTML = document.getElementById('qan-mom').innerHTML;
+  const weeklyHTML = document.getElementById('qan-weekly').innerHTML;
+  const win = window.open('','_blank','width=800,height=900');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>QR Collections Analytics</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Segoe UI',sans-serif;background:#fff;color:#1A2332;padding:24px;}
+    h1{font-size:18px;font-weight:800;margin-bottom:4px;}
+    .sub{font-size:12px;color:#6B7280;margin-bottom:20px;}
+    .tiles{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:20px;}
+    .tile{border-radius:10px;padding:12px;text-align:center;}
+    .t-pp{background:#EDE9FE;}.t-uf{background:#FFF7ED;}.t-avg{background:#F0F9FF;}.t-cnt{background:#F0FDF4;}
+    .tile-val{font-size:15px;font-weight:800;font-family:monospace;}
+    .tile-lbl{font-size:10px;color:#6B7280;margin-top:3px;}
+    .section{margin-bottom:20px;}
+    .section-title{font-size:13px;font-weight:700;color:#1A2332;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #E2E8F0;}
+    .an-mom-wrap{display:flex;align-items:flex-end;gap:3px;height:110px;overflow-x:auto;}
+    .an-mom-col{display:flex;flex-direction:column;align-items:center;min-width:38px;flex-shrink:0;}
+    .an-mom-bars{display:flex;gap:2px;align-items:flex-end;width:100%;}
+    .an-bar-d{background:#5B2EE8;border-radius:3px 3px 0 0;width:50%;}
+    .an-bar-c{background:#F97316;border-radius:3px 3px 0 0;width:50%;}
+    .an-mom-lbl{font-size:8px;color:#6B7280;margin-top:4px;text-align:center;}
+    .qan-wk-row{display:flex;align-items:center;padding:7px 0;border-bottom:1px solid #F1F5F9;gap:10px;}
+    .qan-wk-lbl{font-size:11px;color:#6B7280;width:70px;flex-shrink:0;}
+    .qan-wk-bar-wrap{flex:1;background:#F1F5F9;border-radius:4px;height:8px;overflow:hidden;}
+    .qan-wk-bar-pp{height:8px;border-radius:4px 0 0 4px;background:#5B2EE8;float:left;}
+    .qan-wk-bar-uf{height:8px;border-radius:0 4px 4px 0;background:#F97316;float:left;}
+    .qan-wk-amt{font-size:11px;font-weight:700;color:#1A2332;width:80px;text-align:right;font-family:monospace;}
+    .legend{display:flex;gap:14px;margin-top:8px;}
+    .leg{display:flex;align-items:center;gap:5px;font-size:10px;color:#6B7280;}
+    .leg-dot{width:9px;height:9px;border-radius:2px;}
+    .footer{margin-top:24px;font-size:10px;color:#9CA3AF;text-align:center;border-top:1px solid #F1F5F9;padding-top:12px;}
+    @media print{.no-print{display:none!important;}}
+  </style></head><body>
+  <div class="no-print" style="margin-bottom:16px;">
+    <button onclick="window.print()" style="background:#1A2332;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;margin-right:8px;">🖨️ Print / Save PDF</button>
+    <button onclick="window.close()" style="background:#F1F5F9;color:#1A2332;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;">✕ Close</button>
+  </div>
+  <h1>📱 QR Collections — Analytics Report</h1>
+  <div class="sub">Period: ${periodLabel} &nbsp;|&nbsp; ${from} to ${to} &nbsp;|&nbsp; Generated: ${new Date().toLocaleString('en-IN')}</div>
+  <div class="tiles">
+    <div class="tile t-pp"><div class="tile-val" style="color:#5B2EE8;">${pp}</div><div class="tile-lbl">PhonePe</div></div>
+    <div class="tile t-uf"><div class="tile-val" style="color:#F97316;">${uf}</div><div class="tile-lbl">Ufill</div></div>
+    <div class="tile t-avg"><div class="tile-val" style="color:#0369A1;">${avg}</div><div class="tile-lbl">Avg/Day</div></div>
+    <div class="tile t-cnt"><div class="tile-val" style="color:#15803D;">${entries}</div><div class="tile-lbl">Entries</div></div>
+  </div>
+  <div class="section">
+    <div class="section-title">📅 Month-on-Month Comparison</div>
+    <div class="an-mom-wrap">${momHTML}</div>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:#5B2EE8;"></div>PhonePe</div>
+      <div class="leg"><div class="leg-dot" style="background:#F97316;"></div>Ufill</div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">📆 Weekly Trend</div>
+    ${weeklyHTML}
+  </div>
+  <div class="footer">QR Collections Manager &nbsp;|&nbsp; DSM Pump Star</div>
+  </body></html>`);
+  win.document.close();
+}
 
 // ── QR ANALYTICS ─────────────────────────────────────────────────────────────
 let _qrAnPeriod = 'week';
