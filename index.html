@@ -472,6 +472,7 @@ let db = { entries:[], received:[] };
 // ── UTILS ──────────────────────────────────────────────────────────────────
 function todayStr(){return new Date().toISOString().split('T')[0];}
 function fmtAmt(n){return'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtTime(iso){if(!iso)return'';try{return new Date(iso).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});}catch{return'';}}
 function fmtDate(d){
   if(!d)return'—';const s=String(d);
   if(s.includes('/')){return s;}
@@ -598,9 +599,10 @@ function refreshDSM(){
 }
 
 function entryHTML(e,showDel){
+  const ts=fmtTime(e.createdAt);
   return`<div class="entry-item">
     <div class="entry-header">
-      <div><span class="shift-badge">🕐 Shift ${e.shift}</span><div class="entry-date">📅 ${fmtDate(e.date)}</div></div>
+      <div><span class="shift-badge">🕐 Shift ${e.shift}</span><div class="entry-date">📅 ${fmtDate(e.date)}${ts?' · ⏱ '+ts:''}</div></div>
       <div style="font-size:12px;font-weight:700;color:var(--muted);">${fmtAmt((e.pp||0)+(e.uf||0))} total</div>
     </div>
     <div class="entry-amounts">
