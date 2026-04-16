@@ -231,6 +231,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div class="tab" onclick="switchTab('report')">📊 Report</div>
     <div class="tab" onclick="switchTab('ledger')">📒 Ledger</div>
     <div class="tab" onclick="switchTab('analytics')">📈 Analytics</div>
+    <div class="tab" onclick="switchTab('log')">📋 Log</div>
   </div>
 </div>
 
@@ -521,6 +522,16 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   </div>
 </div>
 
+<!-- ═══ ACTIVITY LOG ═══ -->
+<div class="page" id="page-log">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;">
+    <div style="font-size:14px;font-weight:800;color:#1A2332;">📋 Activity Log</div>
+    <button onclick="clearQRLog()" style="background:transparent;border:1.5px solid #FECACA;color:#DC2626;font-size:11px;font-weight:700;padding:6px 12px;border-radius:8px;cursor:pointer;">🗑 Clear</button>
+  </div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:13px;">Last 500 events — saves, edits, deletes</div>
+  <div id="qr-log-list"></div>
+</div>
+
 <div class="toast" id="toast"></div>
 <div class="modal-overlay" id="modal" onclick="maybeCloseModal(event)">
   <div class="modal-box"><div class="modal-handle"></div><div id="modal-body"></div></div>
@@ -597,7 +608,7 @@ function saveLocal(){localStorage.setItem('qr_db',JSON.stringify(db));}
 // ── TABS ───────────────────────────────────────────────────────────────────
 function switchTab(tab){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['dash','dsm','recv','report','ledger','analytics'][i]===tab));
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['dash','dsm','recv','report','ledger','analytics','log'][i]===tab));
   document.getElementById('page-'+tab).classList.add('active');
   if(tab==='dash'){refreshQRDash();checkNotifBanner();}
   if(tab==='recv')refreshRecv();
@@ -609,6 +620,7 @@ function switchTab(tab){
     document.getElementById('led-to').value=today;
   }
   if(tab==='analytics'){refreshQRAnalytics();}
+  if(tab==='log'){renderQRLog();}
 }
 
 // ── MATCH ENGINE ───────────────────────────────────────────────────────────
@@ -644,6 +656,7 @@ async function saveDSM(){
   // Check duplicate shift+date
   if(db.entries.some(e=>e.date===date&&e.shift===shift))return toast(`Shift ${shift} already entered for this date`,'err');
   const entry={id:uid(),date,shift,pp,uf,createdAt:new Date().toISOString()};
+  qrLog('save',`Saved Shift ${shift} — PP: ${fmtAmt(pp)} | UF: ${fmtAmt(uf)} | ${fmtDate(date)}`);
   db.entries.push(entry);
   document.getElementById('dsm-pp').value='';
   document.getElementById('dsm-uf').value='';
@@ -713,7 +726,7 @@ async function saveEditEntry(id){
   const uf=parseFloat(document.getElementById('ee-uf').value)||0;
   if(!date)return toast('Fill all fields','err');
   const i=db.entries.findIndex(e=>e.id===id);
-  if(i>=0)db.entries[i]={...db.entries[i],shift,date,pp,uf};
+  if(i>=0){qrLog('edit',`Edited Shift ${shift} — PP: ${fmtAmt(pp)} | UF: ${fmtAmt(uf)} | ${fmtDate(date)}`);db.entries[i]={...db.entries[i],shift,date,pp,uf};}
   closeModal();refreshDSM();saveLocal();toast('Updated ✓');
   setSyncStatus('syncing');
   await apiPost({action:'updateEntry',data:db.entries[i]});
@@ -722,6 +735,8 @@ async function saveEditEntry(id){
 
 async function delEntry(id){
   if(!confirm('Delete this entry?'))return;
+  const _delE=db.entries.find(e=>e.id===id);
+  if(_delE)qrLog('delete',`Deleted Shift ${_delE.shift} — PP: ${fmtAmt(_delE.pp||0)} | UF: ${fmtAmt(_delE.uf||0)} | ${fmtDate(_delE.date)}`);
   db.entries=db.entries.filter(e=>e.id!==id);
   refreshDSM();saveLocal();toast('Deleted','err');
   setSyncStatus('syncing');
@@ -1576,6 +1591,34 @@ function printQRAnalytics(){
   const _pw=window.open('','_blank');
   if(_pw){_pw.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>QR Analytics</title><style>body{font-family:Arial,sans-serif;font-size:12px;padding:24px;color:#1A2332;}h1{font-size:18px;margin-bottom:4px;}.meta{color:#888;font-size:11px;margin-bottom:14px;}.gr{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:16px;}.tile{border-radius:8px;padding:10px;text-align:center;}.tv{font-size:14px;font-weight:800;font-family:monospace;}.tl{font-size:9px;color:#888;margin-top:2px;}.sec{margin-bottom:16px;}.st{font-size:12px;font-weight:700;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #E2E8F0;}.an-mom-wrap{display:flex;align-items:flex-end;gap:3px;height:90px;}.an-mom-col{display:flex;flex-direction:column;align-items:center;min-width:34px;flex-shrink:0;}.an-mom-bars{display:flex;gap:2px;align-items:flex-end;width:100%;}.an-bar-d{background:#5B2EE8;border-radius:2px 2px 0 0;width:50%;}.an-bar-c{background:#F97316;border-radius:2px 2px 0 0;width:50%;}.an-mom-lbl{font-size:7px;color:#888;margin-top:3px;text-align:center;}.qan-wk-row{display:flex;align-items:center;padding:5px 0;border-bottom:1px solid #F1F5F9;gap:6px;}.qan-wk-lbl{font-size:9px;color:#888;width:55px;flex-shrink:0;}.qan-wk-bar-wrap{flex:1;background:#F1F5F9;border-radius:3px;height:6px;overflow:hidden;}.qan-wk-bar-pp{height:6px;border-radius:3px 0 0 3px;background:#5B2EE8;float:left;}.qan-wk-bar-uf{height:6px;border-radius:0 3px 3px 0;background:#F97316;float:left;}.qan-wk-amt{font-size:9px;font-weight:700;width:68px;text-align:right;font-family:monospace;}.btn{background:#5B2EE8;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:700;margin:0 8px 14px 0;}.btn-back{background:#6B7280!important;}.ft{margin-top:20px;font-size:9px;color:#9CA3AF;text-align:center;}@media print{.no-print{display:none!important;}}</style></head><body><div class="no-print" style="margin-bottom:14px;"><button class="btn btn-back" onclick="window.close()">← Back to App</button><button class="btn" onclick="window.print()">🖨 Print / Save PDF</button></div><h1>📱 QR Collections — Analytics</h1><div class="meta">Period: ${periodLabel} | ${from} to ${to} | Generated: ${new Date().toLocaleString('en-IN')}</div><div class="gr"><div class="tile" style="background:#EDE9FE"><div class="tv" style="color:#5B2EE8">${pp}</div><div class="tl">PhonePe</div></div><div class="tile" style="background:#FFF7ED"><div class="tv" style="color:#F97316">${uf}</div><div class="tl">Ufill</div></div><div class="tile" style="background:#F0F9FF"><div class="tv" style="color:#0369A1">${avg}</div><div class="tl">Avg/Day</div></div><div class="tile" style="background:#F0FDF4"><div class="tv" style="color:#15803D">${entries}</div><div class="tl">Entries</div></div></div><div class="sec"><div class="st">Month-on-Month</div><div class="an-mom-wrap">${momHTML}</div><div style="display:flex;gap:10px;margin-top:5px;"><div style="display:flex;align-items:center;gap:3px;font-size:9px;color:#888;"><div style="width:7px;height:7px;border-radius:2px;background:#5B2EE8;"></div>PhonePe</div><div style="display:flex;align-items:center;gap:3px;font-size:9px;color:#888;"><div style="width:7px;height:7px;border-radius:2px;background:#F97316;"></div>Ufill</div></div></div><div class="sec"><div class="st">Weekly Trend</div>${weeklyHTML}</div><div class="ft">QR Collections Manager | DSM Pump Star</div></body></html>`);_pw.document.close();}toast('PDF opened!');
 }
+
+// ── ACTIVITY LOG ─────────────────────────────────────────────────────────────
+const QR_LOG_KEY = 'qr_activity_log';
+const QR_LOG_MAX = 500;
+
+function qrLog(type, msg) {
+  const logs = JSON.parse(localStorage.getItem(QR_LOG_KEY) || '[]');
+  const icons = {save:'➕', edit:'✏️', delete:'🗑️', recv:'💰'};
+  logs.unshift({type, msg, icon:icons[type]||'📋', time:new Date().toISOString(), ts:new Date().toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true})});
+  if(logs.length > QR_LOG_MAX) logs.length = QR_LOG_MAX;
+  localStorage.setItem(QR_LOG_KEY, JSON.stringify(logs));
+}
+
+function renderQRLog() {
+  const logs = JSON.parse(localStorage.getItem(QR_LOG_KEY) || '[]');
+  const el = document.getElementById('qr-log-list');
+  if(!el) return;
+  if(!logs.length){el.innerHTML='<div style="text-align:center;padding:30px 0;color:var(--muted);"><div style="font-size:32px;margin-bottom:8px;">📋</div><p>No activity yet</p></div>';return;}
+  el.innerHTML = logs.map(l=>`<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);"><div style="font-size:18px;flex-shrink:0;">${l.icon}</div><div style="flex:1;"><div style="font-size:12px;font-weight:600;color:#1A2332;">${l.msg}</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">${l.ts}</div></div></div>`).join('');
+}
+
+function clearQRLog() {
+  if(!confirm('Clear all activity log?'))return;
+  localStorage.removeItem(QR_LOG_KEY);
+  renderQRLog();
+  toast('Log cleared');
+}
+
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('firebase-messaging-sw.js')
