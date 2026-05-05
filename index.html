@@ -321,7 +321,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <button class="btn btn-primary" onclick="saveDSM()">＋ Save Entry</button>
   </div>
 
-  <div class="sh"><div class="sh-title">Today's Entries</div><div class="sh-count" id="today-count"></div></div>
+  <div style="position:relative;margin-bottom:10px;">
+    <input type="text" id="qr-search" placeholder="🔍 Search shift, date, amount..." oninput="refreshDSM()" style="width:100%;padding:10px 36px 10px 13px;border-radius:10px;border:1.5px solid var(--border);font-size:13px;background:#fff;outline:none;box-sizing:border-box;">
+    <span id="qr-search-clear" onclick="document.getElementById('qr-search').value='';refreshDSM();" style="display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--muted);font-size:16px;">✕</span>
+  </div>
+  <div class="sh"><div class="sh-title" id="qr-today-label">Today's Entries</div><div class="sh-count" id="today-count"></div></div>
   <div id="dsm-today"></div>
   <div class="divider"></div>
   <div class="sh"><div class="sh-title">Recent Entries</div><div class="sh-count" id="recent-count"></div></div>
@@ -670,6 +674,36 @@ async function saveDSM(){
 
 function refreshDSM(){
   const today=todayStr();
+  const qEl=document.getElementById('qr-search');
+  const q=(qEl?qEl.value:'').trim().toLowerCase();
+  const clr=document.getElementById('qr-search-clear');
+  if(clr)clr.style.display=q?'block':'none';
+  const lbl=document.getElementById('qr-today-label');
+
+  function matchEntry(e){
+    if(!q)return true;
+    return fmtDate(e.date).toLowerCase().includes(q)||
+      String(e.shift).includes(q)||
+      String(e.pp||0).includes(q)||
+      String(e.uf||0).includes(q)||
+      fmtAmt(e.pp||0).includes(q)||
+      fmtAmt(e.uf||0).includes(q)||
+      fmtAmt((e.pp||0)+(e.uf||0)).includes(q);
+  }
+
+  if(q){
+    const matched=db.entries.filter(matchEntry).sort((a,b)=>b.date.localeCompare(a.date)||parseInt(a.shift)-parseInt(b.shift));
+    if(lbl)lbl.textContent='Search Results';
+    document.getElementById('today-count').textContent=`${matched.length} result${matched.length!==1?'s':''}`;
+    document.getElementById('dsm-today').innerHTML=matched.length
+      ?matched.map(e=>entryHTML(e,true)).join('')
+      :'<div class="empty"><div class="ico">🔍</div><p>No entries match</p></div>';
+    document.getElementById('recent-count').textContent='';
+    document.getElementById('dsm-recent').innerHTML='';
+    return;
+  }
+
+  if(lbl)lbl.textContent="Today's Entries";
   const todayE=db.entries.filter(e=>e.date===today).sort((a,b)=>parseInt(a.shift)-parseInt(b.shift));
   const recentE=db.entries.filter(e=>e.date!==today).sort((a,b)=>b.date.localeCompare(a.date)||parseInt(a.shift)-parseInt(b.shift)).slice(0,30);
   document.getElementById('today-count').textContent=`${todayE.length} entr${todayE.length!==1?'ies':'y'}`;
